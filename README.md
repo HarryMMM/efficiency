@@ -9,7 +9,8 @@
 
 ### 初始化honey系统
 进入根目录，执行init脚本
-```sh init
+```
+sh init
 ```
 ### 使用
 此时你可以使用efficiency/bin中的脚本了
