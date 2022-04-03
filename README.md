@@ -8,10 +8,13 @@
 ## 开始
 
 ### 初始化honey系统
-进入根目录，执行init脚本
+进入根目录，执行init脚本，此时会生成%HONEY_HOME%环境变量
 ```
 sh init
 ```
+
+### 添加%HONEY_HOME%到windows系统环境变量
+手动添加%HONEY_HOME%到Path环境变量
 ### 使用
 此时你可以使用efficiency/bin中的脚本了
 
