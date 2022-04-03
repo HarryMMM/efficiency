@@ -1,0 +1,16 @@
+#!/bin/bash
+CURRENT_DIR=$(
+    cd "$(dirname "$0")" || exit
+    pwd
+)
+
+# the initialization script path
+INIT_DIR=$CURRENT_DIR/bin/init/
+INIT_FILE=$(ls "$INIT_DIR")
+SYSTEM_PROFILE_PATH="$CURRENT_DIR"/config/system/profile
+
+# do init
+for item in $INIT_FILE; do
+    sh "$INIT_DIR/${item}" "$SYSTEM_PROFILE_PATH"
+done
+

@@ -1,0 +1,5 @@
+# Log file
+*.log
+
+# code runner
+tempCodeRunnerFile.sh

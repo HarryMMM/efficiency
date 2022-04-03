@@ -1,0 +1,43 @@
+#!/bin/bash
+#log path is /var/log/openstack-kilo
+#if commod execute sucessed,it will return 0 else return 1
+# Copyright 2014 Intel Corporation, All Rights Reserved.
+# shellcheck source=../../config/system/profie
+CURRENT_DIR=$(
+	cd "$(dirname "$0")" || exit
+	pwd
+)
+source "$CURRENT_DIR/../../config/system/profile"
+LOG_DIR="$ROOT_DIR"/log
+LOG_FILE="$LOG_DIR"/openstack-kilo.log
+if [ ! -d "$LOG_DIR" ]; then
+	mkdir -p "$LOG_DIR"
+fi
+
+function log_info() {
+	log_prefix=honey-$(basename "$0"):
+	echo -e "\033[32m$log_prefix $*\033[0m"
+	DATE_N=$(date "+%Y-%m-%d %H:%M:%S")
+	USER_N=$(whoami)
+	echo "${DATE_N} ${USER_N} execute $0 [INFO] $*" >> "$LOG_FILE" #执行成功日志打印路径
+
+}
+
+function log_error() {
+	log_prefix=honey-$(basename "$0"):
+	echo -e "\033[41;37m$log_prefix $*\033[0m"
+	DATE_N=$(date "+%Y-%m-%d %H:%M:%S")
+	USER_N=$(whoami)
+	echo -e "\033[41;37m ${DATE_N} ${USER_N} execute $0 [ERROR] $* \033[0m" >> "$LOG_FILE" #执行失败日志打印路径
+
+}
+
+function fn_log() {
+	if [ $? -eq 0 ]; then
+		log_info "$* sucessfully"
+	else
+		log_error "$* failed"
+		exit 1
+	fi
+}
+trap 'fn_log "DO NOT SEND CTR + C WHEN EXECUTE SCRIPT !!!! "' 2

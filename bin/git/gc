@@ -1,0 +1,27 @@
+#!/bin/bash
+CURRENT_DIR=$(
+    cd "$(dirname "$0")" || exit
+    pwd
+)
+source "$CURRENT_DIR/../../config/system/profile"
+# shellcheck source=$CUSTOM_PROFILE_PATH
+source "$CUSTOM_PROFILE_PATH"
+# shellcheck source=LOG_PRINTER_FILE
+source "$LOG_PRINTER_FILE"
+
+project=$1
+target_branch=$2
+if [[ ${project} == '' || ${target_branch} == '' ]]; then
+    log_error Incorrect grammar, you can use like: sh gc.sh product develop
+    exit 1
+fi
+base_path="$SCP_GROUP_DIR"
+project_dir="$(ls -d -- *-product-*)"
+for dir in $project_dir; do
+    {
+        cd "${base_path}/${dir}" && git checkout "${target_branch}" >/dev/null 2>&1
+        fn_log "${dir}": Switch the branch to ["${target_branch}"]
+        echo ''
+
+    }
+done

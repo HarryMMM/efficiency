@@ -1,0 +1,20 @@
+#!/bin/bash
+function join_with() {
+    string_list=$1
+    separator=$2
+    if [[ -z "${separator}" ]]; then
+        separator=";"
+    fi
+   
+    string_joined=''
+    for item in ${string_list}; do
+
+        if [[ "${string_joined}" != "" ]]; then
+            string_joined="${string_joined}${separator}"
+        fi
+
+        string_joined="${string_joined}${item}"
+
+    done
+    echo "$string_joined"
+}

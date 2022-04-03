@@ -1,0 +1,28 @@
+#!/bin/bash
+##############################################################
+##### this script is used to register command to system ######
+##############################################################
+
+SYSTEM_PROFILE_PATH=$1
+
+# shellcheck source=$1
+source "$SYSTEM_PROFILE_PATH"
+source "$BIN_DIR"/common/directory_tools
+source "$BIN_DIR"/common/string_tools
+# shellcheck source=src/util.sh
+source "$LOG_PRINTER_FILE"
+
+honey_script_path=$(join_with "$(get_dir_and_subdir "$BIN_DIR")")
+fn_log honey_script_path is "$honey_script_path"
+
+# set HONEY_HOME env
+setx HONEY_HOME "$honey_script_path" 
+
+
+# HONEY_HOME_KEY=%HONEY_HOME%
+
+# if [[ "${PATH}" != *"$HONEY_HOME_KEY"* ]]; then
+#     setx PATH2 "$PATH;$HONEY_HOME_KEY"
+# fi
+
+
