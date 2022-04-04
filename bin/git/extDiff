@@ -1,0 +1,3 @@
+#!/bin/sh
+# [ $# -eq 7 ] && /D/Porforce/p4merge.exe "$2" "$5"
+[ $# -eq 7 ] && /D/Beyond_Compare_4/BComp.exe "$2" "$5"
