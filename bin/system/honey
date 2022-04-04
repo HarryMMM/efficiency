@@ -12,8 +12,8 @@ case "${SUB_CMD}" in
     config)
         vim "$CUSTOM_PROFILE_PATH"
     ;;
-    2|3)
-        echo "item = 2 or item = 3"
+    hosts)
+       vim /C/Windows/System32/drivers/etc/hosts
     ;;
     *)
         echo "default (none of above)"
