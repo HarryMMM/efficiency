@@ -16,6 +16,7 @@ if [[ ${project} == '' || ${target_branch} == '' ]]; then
     exit 1
 fi
 base_path="$SCP_GROUP_DIR"
+cd "$base_path" || exit 
 project_dir="$(ls -d -- *-product-*)"
 for dir in $project_dir; do
     {
