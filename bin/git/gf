@@ -10,9 +10,8 @@ source "$CUSTOM_PROFILE_PATH"
 source "$LOG_PRINTER_FILE"
 
 project=$1
-target_branch=$2
-if [[ ${project} == '' || ${target_branch} == '' ]]; then
-    log_error Incorrect grammar, you can use like: sh gc.sh product develop
+if [[ ${project} == '' ]]; then
+    log_error Incorrect grammar, you can use like: gc fetch product
     exit 1
 fi
 base_path="$SCP_GROUP_DIR"
@@ -20,8 +19,8 @@ cd "$base_path" || exit
 project_dir="$(ls -d -- *-product-*)"
 for dir in $project_dir; do
     {
-        cd "${base_path}/${dir}" && git checkout "${target_branch}" > "$LOG_DIR"/gc.log 2>&1
-        fn_log "${dir}": Switch the branch to ["${target_branch}"]
+        cd "${base_path}/${dir}" && git fetch > "$LOG_DIR"/gf.log 2>&1
+        fn_log "${dir}": 'fetch'
         echo ''
 
     }
