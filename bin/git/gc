@@ -12,12 +12,15 @@ source "$LOG_PRINTER_FILE"
 project=$1
 target_branch=$2
 if [[ ${project} == '' || ${target_branch} == '' ]]; then
-    log_error Incorrect grammar, you can use like: sh gc.sh product develop
+    log_error Incorrect grammar, you can use like: gc product develop
     exit 1
 fi
 base_path="$SCP_GROUP_DIR"
 cd "$base_path" || exit 
-project_dir="$(ls -d -- *-product-*)"
+project_dir="$(ls -d -- *-"${project}"-*)"
+if [[ "${project}" == "demand" ]]; then
+    project_dir="$(ls -d -- scp-"${project}"-*)"
+fi
 for dir in $project_dir; do
     {
         cd "${base_path}/${dir}" && git checkout "${target_branch}" > "$LOG_DIR"/gc.log 2>&1

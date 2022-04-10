@@ -16,7 +16,10 @@ if [[ ${project} == '' ]]; then
 fi
 base_path="$SCP_GROUP_DIR"
 cd "$base_path" || exit 
-project_dir="$(ls -d -- *-product-*)"
+project_dir="$(ls -d -- *-"${project}"-*)"
+if [[ "${project}" == "demand" ]]; then
+    project_dir="$(ls -d -- scp-"${project}"-*)"
+fi
 for dir in $project_dir; do
     {
         cd "${base_path}/${dir}" && git fetch > "$LOG_DIR"/gf.log 2>&1
