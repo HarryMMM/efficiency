@@ -34,9 +34,11 @@ function log_error() {
 
 function fn_log() {
 	if [ $? -eq 0 ]; then
-		log_info "$* sucessfully"
+		log_info "$1 sucessfully"
 	else
-		log_error "$* failed"
+		log_file=$(basename "$0").log
+		err_message=$(cat "$LOG_DIR"/"${log_file}")
+		log_error "$1 failed,cause:\n\t$err_message"
 		exit 1
 	fi
 }

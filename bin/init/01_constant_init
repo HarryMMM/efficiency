@@ -27,29 +27,29 @@ source "$LOG_PRINTER_FILE"
 # setp 1:  delete profile file
 if [ -f "${SYSTEM_PROFILE_PATH}" ]; then
     rm "$SYSTEM_PROFILE_PATH"
-    fn_log Remove old system prifile file: ["$SYSTEM_PROFILE_PATH"]
+    fn_log "Remove old system prifile file: [$SYSTEM_PROFILE_PATH]"
 fi
 
 ################ create custom profile ###################
 if [ ! -d "${CUSTOM_CONFIG_DIR}" ]; then
     mkdir -p "${CUSTOM_CONFIG_DIR}"
-    fn_log Create custom configuration directory : ["${CUSTOM_CONFIG_DIR}"]
+    fn_log "Create custom configuration directory : [${CUSTOM_CONFIG_DIR}]"
 fi
 
 if [ ! -f "$CUSTOM_PROFILE_PATH" ]; then
     touch "$CUSTOM_PROFILE_PATH"
-    fn_log Create custom profile file: ["$CUSTOM_PROFILE_PATH"]
+    fn_log "Create custom profile file: [$CUSTOM_PROFILE_PATH]"
 fi
 
 ################ initialize system env ###################
 if [ ! -d "${SYSTEM_CONFIG_DIR}" ]; then
     mkdir -p "${SYSTEM_CONFIG_DIR}"
-    fn_log Create directory : ["${SYSTEM_CONFIG_DIR}"]
+    fn_log "Create directory : [${SYSTEM_CONFIG_DIR}]"
 fi
 
 if [ ! -f "$SYSTEM_PROFILE_PATH" ]; then
     touch "$SYSTEM_PROFILE_PATH"
-    fn_log Create system profile file: ["$SYSTEM_PROFILE_PATH"]
+    fn_log "Create system profile file: [$SYSTEM_PROFILE_PATH]"
 fi
 
 {
@@ -63,4 +63,4 @@ fi
     echo "CUSTOM_CONFIG_DIR=$CUSTOM_CONFIG_DIR"
     echo "LOG_DIR=$LOG_DIR"
 } >>"$SYSTEM_PROFILE_PATH"
-fn_log Write environment variable
+fn_log "Write environment variable"

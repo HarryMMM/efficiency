@@ -13,7 +13,7 @@ source "$BIN_DIR"/common/string_tools
 source "$LOG_PRINTER_FILE"
 
 honey_script_path=$(join_with "$(get_dir_and_subdir "$BIN_DIR")")
-fn_log honey_script_path is "$honey_script_path"
+fn_log "honey_script_path is $honey_script_path"
 
 # set HONEY_HOME env
 setx HONEY_HOME "$honey_script_path" 

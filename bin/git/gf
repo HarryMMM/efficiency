@@ -23,7 +23,7 @@ fi
 for dir in $project_dir; do
     {
         cd "${base_path}/${dir}" && git fetch > "$LOG_DIR"/gf.log 2>&1
-        fn_log "${dir}": 'fetch'
+        fn_log "${dir}: fetch"
         echo ''
 
     }

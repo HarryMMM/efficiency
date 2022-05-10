@@ -24,7 +24,7 @@ fi
 for dir in $project_dir; do
     {
         cd "${base_path}/${dir}" && git checkout "${target_branch}" > "$LOG_DIR"/gc.log 2>&1
-        fn_log "${dir}": Switch the branch to ["${target_branch}"]
+        fn_log "${dir}: Switch the branch to [${target_branch}]"
         echo ''
 
     }
