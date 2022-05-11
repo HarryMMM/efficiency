@@ -38,7 +38,7 @@ function fn_log() {
 	else
 		log_file=$(basename "$0").log
 		err_message=$(cat "$LOG_DIR"/"${log_file}")
-		log_error "$1 failed,cause:\n\t$err_message"
+		log_error "$1 failed , cause: [$err_message]"
 		exit 1
 	fi
 }
