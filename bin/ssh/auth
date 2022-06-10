@@ -1,0 +1,88 @@
+#!/bin/bash
+
+##############################################################
+##                    copy ssh local to server              ##
+##############################################################
+CURRENT_DIR=$(
+    cd "$(dirname "$0")" || exit
+    pwd
+)
+source "$CURRENT_DIR/../../config/system/profile"
+# shellcheck source=$CUSTOM_PROFILE_PATH
+source "$CUSTOM_PROFILE_PATH"
+# shellcheck source=LOG_PRINTER_FILE
+source "$LOG_PRINTER_FILE"
+SSH_ROOT_DEFAULT="$HOME/.ssh"
+SSH_PUB_KEY_PATH=''
+
+# check whether ssh key exits, if it does't exist,generate.
+check_pub_key_exist() {
+    host=$1
+    if [[ -n "${SSH_ROOT}" ]]; then
+        SSH_ROOT_DEFAULT=$SSH_ROOT
+        fn_log "Use custom ssh root config: $SSH_ROOT"
+    fi
+    SSH_PUB_KEY_PATH="$SSH_ROOT_DEFAULT/id_rsa.pub"
+
+    if [ ! -f "$SSH_PUB_KEY_PATH" ]; then
+        read -r -p "There is no ssh key, is it generated (Y or any other character to cancel): " -a answer
+        if [[ "${answer[*]}" == "Y" ]]; then
+            log_info "Start generating ssh key ~"
+            ssh-keygen
+            log_info "Ssh key has been generated, the ssh root path is: $SSH_ROOT"
+        else
+            log_info "The authorization operation for ${host} is terminated because you canceled the generation of SSH key."
+            exit 0
+        fi
+    fi
+}
+
+function main() {
+    # check if host is entered, if not,enter.
+    host=$1
+    if [[ -z "${host}" ]]; then
+        read -r -p 'Please enter the host that you want to authorize (or enter "N" to terminate authorization): ' -a host_input
+        host_input_temp="${host_input[*]}"
+        if [[ "${host_input_temp}" == "N" ]]; then
+            log_info "The authorization operation is terminated."
+            exit 0
+        fi
+
+        host="${host_input_temp}"
+    fi
+    log_info "You will authorize host: $host"
+
+    # check if password is entered, if not,enter.
+    # pass=$2
+    # if [[ -z "${pass}" ]]; then
+    #     read -r -p 'Please enter the host that you want to authorize. (or enter "N" to terminate authorization)' -a pass_input
+    #      if [[ "${host_input}" == "N" ]]; then
+    #         log_info "The authorization operation for XXX is terminated."
+    #         exit 0
+    #     fi
+    #     pass="$pass_input"
+    # fi
+
+    # check whether ssh key exits, if it does't exist,generate.
+    check_pub_key_exist "${host}"
+
+    # copy local ssk public key to server
+    ssh-copy-id -i "$SSH_PUB_KEY_PATH" "${host}"
+    # SUB_CMD=$1
+    # case "${SUB_CMD}" in
+    # version)
+    #     find "$base_path" -type f -name pom.xml | xargs sed -i 's/${ur.env}-SNAPSHOT/1.0.0-SNAPSHOT/'
+    #     find "$base_path" -type f -name pom.xml | xargs sed -i 's/${scp.version}/1.0.0-SNAPSHOT/'
+    #     find "$base_path" -type f -name pom.xml | xargs sed -i 's/$/\r/'
+    #     # skip_worktree
+    #     ;;
+    # no-version)
+    #     # find "$base_path" -type f -name pom.xml | xargs git update-index --no-skip-worktree
+    #     ;;
+    # *)
+    #     help
+
+    #     ;;
+    # esac
+}
+main "$*"
