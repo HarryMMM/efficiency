@@ -25,6 +25,9 @@ ssh option
 
 system option
     hosts   edit hosts file
+
+ci cd option
+    ci  some command about ci    
      
 EOF
 }
@@ -38,16 +41,19 @@ EOF
 function main() {
     SUB_CMD=$1
     ORTHER_ARGS="${*:2}"
+
     case "${SUB_CMD}" in
     config)
         vim "$CUSTOM_PROFILE_PATH"
         ;;
     auth)
-        echo
         auth "$ORTHER_ARGS"
         ;;
     hosts)
         vim /C/Windows/System32/drivers/etc/hosts
+        ;;
+    ci)
+        ci "$ORTHER_ARGS"
         ;;
     help)
         help
@@ -69,4 +75,4 @@ function main() {
         ;;
     esac
 }
-main "$*"
+main "$@"

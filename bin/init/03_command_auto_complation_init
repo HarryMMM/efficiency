@@ -1,0 +1,14 @@
+#!/bin/bash
+##############################################################
+# this script is used to config command automatic complation #
+##############################################################
+
+SYSTEM_PROFILE_PATH=$1
+
+# shellcheck source=$1
+source "$SYSTEM_PROFILE_PATH"
+
+# shellcheck source=src/util.sh
+source "$LOG_PRINTER_FILE"
+HONEY_AUTO_COMPLITION_FILE_PATH="$TOOLS_DIR/complitaion/honey_completion"
+echo "source $HONEY_AUTO_COMPLITION_FILE_PATH" >> ~/.bashrc

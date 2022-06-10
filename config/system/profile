@@ -7,3 +7,4 @@ SYSTEM_PROFILE_PATH=/f/self_development/code/efficiency/config/system/profile
 CUSTOM_PROFILE_PATH=/f/self_development/code/efficiency/config/custom/profile
 CUSTOM_CONFIG_DIR=/f/self_development/code/efficiency/config/custom
 LOG_DIR=/f/self_development/code/efficiency/log
+TOOLS_DIR=/f/self_development/code/efficiency/tools

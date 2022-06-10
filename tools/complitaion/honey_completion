@@ -1,0 +1,30 @@
+#!/bin/bash
+
+##############################################################
+##           Automatic completion of honey's command        ##
+##############################################################
+
+_ci_complete_func() {
+    COMPREPLY=()
+    command_name="${COMP_WORDS[COMP_CWORD]}" #注意这里不能使用$1获取只能用 ${COMP_WORDS[COMP_CWORD]}
+    COMPREPLY=($(compgen -W "--change-pom-version --unchange-pom-version" -- ${command_name}))
+    return 0
+}
+_honey_complete_func() {
+    COMPREPLY=()
+    command_name="${COMP_WORDS[COMP_CWORD]}"
+    COMPREPLY=($(compgen -W "ci help hosts" -- ${command_name}))
+    return 0
+}
+
+_honey() {
+    # local cur=${COMP_WORDS[COMP_CWORD]}
+    local cmd=${COMP_WORDS[COMP_CWORD - 1]}
+    case "$cmd" in
+    honey) _honey_complete_func ;;
+    ci) _ci_complete_func ;;
+    *) COMPREPLY=() ;;
+    esac
+}
+complete -o default  -F _honey honey
+

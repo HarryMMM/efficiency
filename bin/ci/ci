@@ -15,26 +15,44 @@ cd "$base_path" || exit
 function help() {
     echo "default (none of above)"
 }
- 
-skip_worktree(){
-    project_dir="$(ls |grep -E 'scp-|ur-')"
-    for dir in $project_dir; do
-    {
-        cur="${base_path}/${dir}"
-        cd "$cur" && git update-index --skip-worktree pom.xml
 
-    }
-done
+skip_worktree() {
+    project_dir="$(ls | grep -E 'scp-|ur-')"
+    for dir in $project_dir; do
+        {
+            cur="${base_path}/${dir}"
+            cd "$cur" && git update-index --skip-worktree pom.xml
+
+        }
+    done
+}
+unchange_pom_version() {
+    project_dir="$(ls | grep -E 'scp-|ur-')"
+    for dir in $project_dir; do
+        {
+            cur="${base_path}/${dir}"
+            cd "$cur" && git -c credential.helper= -c core.quotepath=false -c log.showSignature=false checkout HEAD -- pom.xml
+        }
+    done
+}
+change_pom_version() {
+    find "$base_path" -type f -name pom.xml | xargs sed -i 's/${ur.env}-SNAPSHOT/1.0.0-SNAPSHOT/'
+    find "$base_path" -type f -name pom.xml | xargs sed -i 's/${scp.version}/1.0.0-SNAPSHOT/'
+    find "$base_path" -type f -name pom.xml | xargs sed -i 's/$/\r/'
+    # skip_worktree
 }
 
 function main() {
     SUB_CMD=$1
     case "${SUB_CMD}" in
-    version)
-        find "$base_path" -type f -name pom.xml | xargs sed -i 's/${ur.env}-SNAPSHOT/1.0.0-SNAPSHOT/'
-        find "$base_path" -type f -name pom.xml | xargs sed -i 's/${scp.version}/1.0.0-SNAPSHOT/'
-        find "$base_path" -type f -name pom.xml | xargs sed -i 's/$/\r/'
-        # skip_worktree 
+    --change-pom-version)
+        change_pom_version
+        ;;
+    --unchange-pom-version)
+        unchange_pom_version
+        # find "$base_path" -type f -name pom.xml | xargs git -c credential.helper= -c core.quotepath=false -c log.showSignature=false checkout HEAD --
+        # find "$base_path" -type f -name pom.xml | xargs echo
+        # find "$base_path" -type f -name pom.xml | xargs sed -i 's/$/\r/'
         ;;
     no-version)
         # find "$base_path" -type f -name pom.xml | xargs git update-index --no-skip-worktree
