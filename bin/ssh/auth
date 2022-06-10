@@ -68,21 +68,5 @@ function main() {
 
     # copy local ssk public key to server
     ssh-copy-id -i "$SSH_PUB_KEY_PATH" "${host}"
-    # SUB_CMD=$1
-    # case "${SUB_CMD}" in
-    # version)
-    #     find "$base_path" -type f -name pom.xml | xargs sed -i 's/${ur.env}-SNAPSHOT/1.0.0-SNAPSHOT/'
-    #     find "$base_path" -type f -name pom.xml | xargs sed -i 's/${scp.version}/1.0.0-SNAPSHOT/'
-    #     find "$base_path" -type f -name pom.xml | xargs sed -i 's/$/\r/'
-    #     # skip_worktree
-    #     ;;
-    # no-version)
-    #     # find "$base_path" -type f -name pom.xml | xargs git update-index --no-skip-worktree
-    #     ;;
-    # *)
-    #     help
-
-    #     ;;
-    # esac
 }
 main "$*"
