@@ -1,21 +1,72 @@
 #!/bin/bash
 
-
 CURRENT_DIR=$(
     cd "$(dirname "$0")" || exit
     pwd
 )
 # shellcheck source=../../config/system/profie
 source "$CURRENT_DIR/../../config/system/profile"
-SUB_CMD=$1
-case "${SUB_CMD}" in
+
+function help() {
+    cat <<EOF
+
+usage: honey [--version] [-v] [--help] [-h] <command> [<args>]
+
+honey system option
+    config  costom configuration
+    help get help
+
+honey args
+    --help -h get help
+    --version -v get the version of honey
+    
+ssh option
+    auth    configure password-free login server
+
+system option
+    hosts   edit hosts file
+     
+EOF
+}
+function show_version() {
+    cat <<EOF
+    honey version 0.0.1
+     
+EOF
+}
+
+function main() {
+    SUB_CMD=$1
+    ORTHER_ARGS="${*:2}"
+    case "${SUB_CMD}" in
     config)
         vim "$CUSTOM_PROFILE_PATH"
-    ;;
+        ;;
+    auth)
+        echo
+        auth "$ORTHER_ARGS"
+        ;;
     hosts)
-       vim /C/Windows/System32/drivers/etc/hosts
-    ;;
+        vim /C/Windows/System32/drivers/etc/hosts
+        ;;
+    help)
+        help
+        ;;
+    --version)
+        show_version
+        ;;
+    -v)
+        show_version
+        ;;
+    -h)
+        help
+        ;;
+    --help)
+        help
+        ;;
     *)
-        echo "default (none of above)"
-    ;;
-esac
+        help
+        ;;
+    esac
+}
+main "$*"
