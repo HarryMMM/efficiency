@@ -10,6 +10,14 @@ _ci_complete_func() {
     COMPREPLY=($(compgen -W "--change-pom-version --unchange-pom-version" -- ${command_name}))
     return 0
 }
+
+_ci_change_pom_complete_func() {
+    COMPREPLY=()
+    command_name="${COMP_WORDS[COMP_CWORD]}" #注意这里不能使用$1获取只能用 ${COMP_WORDS[COMP_CWORD]}
+    COMPREPLY=($(compgen -W "--project" -- ${command_name}))
+    return 0
+}
+
 _honey_complete_func() {
     COMPREPLY=()
     command_name="${COMP_WORDS[COMP_CWORD]}"
@@ -23,10 +31,10 @@ _honey() {
     case "$cmd" in
     honey) _honey_complete_func ;;
     ci) _ci_complete_func ;;
+    --change-pom-version|--unchange-pom-version) _ci_change_pom_complete_func ;;
     *) COMPREPLY=() ;;
     esac
 }
 
-# 
-complete -o default  -F _honey honey
-
+#
+complete -o default -F _honey honey

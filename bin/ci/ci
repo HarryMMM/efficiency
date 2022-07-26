@@ -8,6 +8,8 @@ source "$CURRENT_DIR/../../config/system/profile"
 source "$CUSTOM_PROFILE_PATH"
 # shellcheck source=LOG_PRINTER_FILE
 source "$LOG_PRINTER_FILE"
+# shellcheck source=ARGS_TOOL_FILE
+source "${ARGS_TOOL_FILE}"
 
 base_path="$SCP_GROUP_DIR"
 cd "$base_path" || exit
@@ -27,7 +29,10 @@ skip_worktree() {
     done
 }
 unchange_pom_version() {
-    project_dir="$(ls | grep -E 'scp-|ur-')"
+    local project=$1
+    project_dir="$(ls | grep -E "scp-$project")"
+    echo "${project_dir}"
+
     for dir in $project_dir; do
         {
             cur="${base_path}/${dir}"
@@ -36,31 +41,30 @@ unchange_pom_version() {
     done
 }
 change_pom_version() {
-    find "$base_path" -type f -name pom.xml | xargs sed -i 's/${ur.env}-SNAPSHOT/1.0.0-SNAPSHOT/'
-    find "$base_path" -type f -name pom.xml | xargs sed -i 's/${scp.version}/1.0.0-SNAPSHOT/'
-    find "$base_path" -type f -name pom.xml | xargs sed -i 's/$/\r/'
+    local project=$1
+    echo "project is ${project}"
+    find ${base_path} -maxdepth 1 -type d -name "*$project*" | xargs -I {} find {} -type f -name pom.xml | xargs sed -i 's/${ur.env}-SNAPSHOT/1.0.0-SNAPSHOT/'
+    find ${base_path} -maxdepth 1 -type d -name "*$project*" | xargs -I {} find {} -type f -name pom.xml | xargs sed -i 's/${scp.version}/1.0.0-SNAPSHOT/'
+    find ${base_path} -maxdepth 1 -type d -name "*$project*" | xargs -I {} find {} -type f -name pom.xml | xargs sed -i 's/$/\r/'
     # skip_worktree
 }
 
 function main() {
-    SUB_CMD=$1
-    case "${SUB_CMD}" in
-    --change-pom-version)
-        change_pom_version
-        ;;
-    --unchange-pom-version)
-        unchange_pom_version
+    project=$(getArg -a "$@" -k project -l)
+    if [[ -z "${project}" ]]; then
+        project=$(getArg -a "$@" -k p)
+    fi
+    
+    if [[ $(has_arg "$*" --change-pom-version) == "true" ]]; then
+        change_pom_version "$project"
+    elif [[ $(has_arg "$@" --unchange-pom-version) == "true" ]]; then
+        unchange_pom_version "$project"
         # find "$base_path" -type f -name pom.xml | xargs git -c credential.helper= -c core.quotepath=false -c log.showSignature=false checkout HEAD --
         # find "$base_path" -type f -name pom.xml | xargs echo
         # find "$base_path" -type f -name pom.xml | xargs sed -i 's/$/\r/'
-        ;;
-    no-version)
-        # find "$base_path" -type f -name pom.xml | xargs git update-index --no-skip-worktree
-        ;;
-    *)
+    else
         help
+    fi
 
-        ;;
-    esac
 }
 main "$*"

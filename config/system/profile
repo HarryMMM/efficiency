@@ -3,6 +3,7 @@ BIN_DIR=/f/self_development/code/efficiency/bin
 CONFIG_DIR=/f/self_development/code/efficiency/config
 BIN_COMMON_DIR=/f/self_development/code/efficiency/bin/common
 LOG_PRINTER_FILE=/f/self_development/code/efficiency/bin/common/log_printer
+ARGS_TOOL_FILE=/f/self_development/code/efficiency/bin/common/args_tool
 SYSTEM_PROFILE_PATH=/f/self_development/code/efficiency/config/system/profile
 CUSTOM_PROFILE_PATH=/f/self_development/code/efficiency/config/custom/profile
 CUSTOM_CONFIG_DIR=/f/self_development/code/efficiency/config/custom
