@@ -29,10 +29,22 @@ skip_worktree() {
     done
 }
 unchange_pom_version() {
-    local project=$1
-    project_dir="$(ls | grep -E "scp-$project")"
-    echo "${project_dir}"
+    local project_dir=''
+    if [[ -z "$1" ]]; then
+        read -r -p "You have not entered the project name. Please enter the project name or 'ALL' change the POM file of all projects): " -a pro
+        if [[ "${pro[*]}" == "ALL" ]]; then
+            project_dir="$(ls | grep -E "scp-|ur-")"
+        else
+            project_dir="$(ls | grep -E "${pro[*]}")"
+        fi
+    else
+        project_dir="$(ls | grep -E "$1")"
+    fi
 
+    if [[ -z "${project_dir}" ]]; then
+        log_info 'no project find,exit.'
+        exit 0
+    fi
     for dir in $project_dir; do
         {
             cur="${base_path}/${dir}"
@@ -41,11 +53,26 @@ unchange_pom_version() {
     done
 }
 change_pom_version() {
-    local project=$1
-    echo "project is ${project}"
-    find ${base_path} -maxdepth 1 -type d -name "*$project*" | xargs -I {} find {} -type f -name pom.xml | xargs sed -i 's/${ur.env}-SNAPSHOT/1.0.0-SNAPSHOT/'
-    find ${base_path} -maxdepth 1 -type d -name "*$project*" | xargs -I {} find {} -type f -name pom.xml | xargs sed -i 's/${scp.version}/1.0.0-SNAPSHOT/'
-    find ${base_path} -maxdepth 1 -type d -name "*$project*" | xargs -I {} find {} -type f -name pom.xml | xargs sed -i 's/$/\r/'
+    local project=''
+    if [[ -z "$1" ]]; then
+        read -r -p "You have not entered the project name. Please enter the project name or 'ALL' change the POM file of all projects): " -a pro
+        if [[ "${pro[*]}" == "ALL" ]]; then
+            project=".*ur-.*\|.*scp-.*"
+        else
+            project=".*${pro[*]}.*"
+            if [[ -z "$(ls | grep -E "$project")" ]]; then
+                log_info 'no project find,exit.'
+                exit 0
+            fi
+        fi
+    else
+        project=".*$1.*"
+    fi
+  echo "${project}"
+  
+    find ${base_path} -maxdepth 1 -type d -regex "$project" | xargs -I {} find {} -type f -name pom.xml | xargs sed -i 's/${ur.env}-SNAPSHOT/1.0.0-SNAPSHOT/'
+    find ${base_path} -maxdepth 1 -type d -regex "$project" | xargs -I {} find {} -type f -name pom.xml | xargs sed -i 's/${scp.version}/1.0.0-SNAPSHOT/'
+    find ${base_path} -maxdepth 1 -type d -regex "$project" | xargs -I {} find {} -type f -name pom.xml | xargs sed -i 's/$/\r/'
     # skip_worktree
 }
 
@@ -54,7 +81,7 @@ function main() {
     if [[ -z "${project}" ]]; then
         project=$(getArg -a "$@" -k p)
     fi
-    
+
     if [[ $(has_arg "$*" --change-pom-version) == "true" ]]; then
         change_pom_version "$project"
     elif [[ $(has_arg "$@" --unchange-pom-version) == "true" ]]; then
