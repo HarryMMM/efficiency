@@ -42,7 +42,7 @@ unchange_pom_version() {
     fi
 
     if [[ -z "${project_dir}" ]]; then
-        log_info 'no project find,exit.'
+        log_info 'no project find,no changed.'
         exit 0
     fi
     for dir in $project_dir; do
@@ -60,16 +60,19 @@ change_pom_version() {
             project=".*ur-.*\|.*scp-.*"
         else
             project=".*${pro[*]}.*"
-            if [[ -z "$(ls | grep -E "$project")" ]]; then
-                log_info 'no project find,exit.'
+            if [[ -z "$(ls | grep -E "${pro[*]}")" ]]; then
+                log_info 'no project find,no changed.'
                 exit 0
             fi
         fi
     else
+        if [[ -z "$(ls | grep -E "$1")" ]]; then
+            log_info 'no project find,no changed.'
+            exit 0
+        fi
         project=".*$1.*"
     fi
-  echo "${project}"
-  
+
     find ${base_path} -maxdepth 1 -type d -regex "$project" | xargs -I {} find {} -type f -name pom.xml | xargs sed -i 's/${ur.env}-SNAPSHOT/1.0.0-SNAPSHOT/'
     find ${base_path} -maxdepth 1 -type d -regex "$project" | xargs -I {} find {} -type f -name pom.xml | xargs sed -i 's/${scp.version}/1.0.0-SNAPSHOT/'
     find ${base_path} -maxdepth 1 -type d -regex "$project" | xargs -I {} find {} -type f -name pom.xml | xargs sed -i 's/$/\r/'
@@ -92,6 +95,5 @@ function main() {
     else
         help
     fi
-
 }
 main "$*"
