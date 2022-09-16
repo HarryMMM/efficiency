@@ -1,0 +1,59 @@
+#!/bin/bash
+CURRENT_DIR=$(
+    cd "$(dirname "$0")" || exit
+    pwd
+)
+source "$CURRENT_DIR/../../config/system/profile"
+# shellcheck source=$CUSTOM_PROFILE_PATH
+source "$CUSTOM_PROFILE_PATH"
+# shellcheck source=LOG_PRINTER_FILE
+source "$LOG_PRINTER_FILE"
+
+git_protocal_prefix='git@'
+http_protocal_prefix='http://'
+
+project=$1
+if [[ ${project} == '' ]]; then
+    log_error Incorrect grammar, you can use like: gc product
+    exit 1
+fi
+base_path="$SCP_GROUP_DIR"
+cd "$base_path" || exit
+project_dir="$(ls -d -- *-"${project}"-*)"
+if [[ "${project}" == "demand" ]]; then
+    project_dir="$(ls -d -- scp-"${project}"-*)"
+fi
+for dir in $project_dir; do
+    {
+        ori_url=$(cd "${base_path}/${dir}" && find -maxdepth 3 -name 'config' | xargs grep 'url =')
+        separator=''
+        replace_from_separator=''
+        replace_to_separator=''
+        new_prefix=''
+        if [[ "${ori_url}" == *"${git_protocal_prefix}"* ]]; then
+            separator=${git_protocal_prefix}
+            new_prefix=${http_protocal_prefix}
+            replace_from_separator=':'
+            replace_to_separator='/'
+        elif [[ "${ori_url}" == *"${http_protocal_prefix}"* ]]; then
+            separator=${http_protocal_prefix}
+            new_prefix=${git_protocal_prefix}
+             replace_from_separator='/'
+            replace_to_separator=':'
+        else
+            fn_log "${dir}: Unsupport protocol,skipped."
+            echo ''
+
+        fi
+
+        if [[ -n "${separator}" && -n "${new_prefix}" ]]; then
+            sub_url=${ori_url#*"${separator}"}
+            sub_url=${sub_url/"$replace_from_separator"/"$replace_to_separator"}
+            new_url=$new_prefix$sub_url
+            cd "${base_path}/${dir}" &&  git remote set-url origin "$new_url"
+            fn_log "${dir}: Switch the protocol of git remote branch from $separator to $new_prefix"
+            echo ''
+        fi
+    }
+
+done
