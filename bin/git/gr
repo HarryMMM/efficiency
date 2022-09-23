@@ -26,6 +26,7 @@ fi
 for dir in $project_dir; do
     {
         ori_url=$(cd "${base_path}/${dir}" && find -maxdepth 3 -name 'config' | xargs grep 'url =')
+        log_info "The old git remote of ${dir} is '${ori_url#*'url = '}'"
         separator=''
         replace_from_separator=''
         replace_to_separator=''
@@ -50,6 +51,8 @@ for dir in $project_dir; do
             sub_url=${ori_url#*"${separator}"}
             sub_url=${sub_url/"$replace_from_separator"/"$replace_to_separator"}
             new_url=$new_prefix$sub_url
+            log_info "The new git remote of ${dir} is '${new_url}'"
+           
             cd "${base_path}/${dir}" &&  git remote set-url origin "$new_url"
             fn_log "${dir}: Switch the protocol of git remote branch from $separator to $new_prefix"
             echo ''
