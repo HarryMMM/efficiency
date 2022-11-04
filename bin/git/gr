@@ -8,55 +8,103 @@ source "$CURRENT_DIR/../../config/system/profile"
 source "$CUSTOM_PROFILE_PATH"
 # shellcheck source=LOG_PRINTER_FILE
 source "$LOG_PRINTER_FILE"
+# shellcheck source=ARGS_TOOL_FILE
+source "${ARGS_TOOL_FILE}"
 
 git_protocal_prefix='git@'
 http_protocal_prefix='http://'
 
-project=$1
-if [[ ${project} == '' ]]; then
-    log_error Incorrect grammar, you can use like: gc product
-    exit 1
-fi
-base_path="$SCP_GROUP_DIR"
-cd "$base_path" || exit
-project_dir="$(ls -d -- *-"${project}"-*)"
-if [[ "${project}" == "demand" ]]; then
-    project_dir="$(ls -d -- scp-"${project}"-*)"
-fi
-for dir in $project_dir; do
-    {
-        ori_url=$(cd "${base_path}/${dir}" && find -maxdepth 3 -name 'config' | xargs grep 'url =')
-        log_info "The old git remote of ${dir} is '${ori_url#*'url = '}'"
-        separator=''
-        replace_from_separator=''
-        replace_to_separator=''
-        new_prefix=''
-        if [[ "${ori_url}" == *"${git_protocal_prefix}"* ]]; then
-            separator=${git_protocal_prefix}
-            new_prefix=${http_protocal_prefix}
-            replace_from_separator=':'
-            replace_to_separator='/'
-        elif [[ "${ori_url}" == *"${http_protocal_prefix}"* ]]; then
-            separator=${http_protocal_prefix}
-            new_prefix=${git_protocal_prefix}
-             replace_from_separator='/'
-            replace_to_separator=':'
+function switch_remote_auto() {
+    project_dir=$1
+    target=$2
+    target_protocal_prefix=''
+    if [[ "${target}" == "git" ]]; then
+        target_protocal_prefix=${git_protocal_prefix}
+    elif [[ "${target}" == "http" ]]; then
+        target_protocal_prefix=${http_protocal_prefix}
+    fi
+    for dir in $project_dir; do
+        {
+            ori_url=$(cd "${base_path}/${dir}" && find -maxdepth 3 -name 'config' -type f | xargs grep 'url =')
+            echo "${dir}"
+            log_info "The old git remote is '${ori_url#*'url = '}'"
+            separator=''
+            replace_from_separator=''
+            replace_to_separator=''
+            new_prefix=''
+
+            if [[ "$target_protocal_prefix" && "${ori_url}" == *"${target_protocal_prefix}"* ]]; then
+                log_info "The old git remote is the same as the target remote: [${target}], do nothing."
+                echo ''
+
+                continue
+            else
+                if [[ "${ori_url}" == *"${git_protocal_prefix}"* ]]; then
+                    separator=${git_protocal_prefix}
+                    new_prefix=${http_protocal_prefix}
+                    replace_from_separator=':'
+                    replace_to_separator='/'
+                elif [[ "${ori_url}" == *"${http_protocal_prefix}"* ]]; then
+                    separator=${http_protocal_prefix}
+                    new_prefix=${git_protocal_prefix}
+                    replace_from_separator='/'
+                    replace_to_separator=':'
+                else
+                    fn_log "${dir}: Unsupport protocol,skipped."
+                    echo ''
+
+                fi
+            fi
+
+            if [[ -n "${separator}" && -n "${new_prefix}" ]]; then
+                sub_url=${ori_url#*"${separator}"}
+                sub_url=${sub_url/"$replace_from_separator"/"$replace_to_separator"}
+                new_url=$new_prefix$sub_url
+                log_info "The new git remote is '${new_url}'"
+
+                cd "${base_path}/${dir}" && git remote set-url origin "$new_url"
+                fn_log "${dir}: Switch to [$new_prefix"]
+                echo ''
+            fi
+        }
+
+    done
+}
+
+function main() {
+    # Separate user input from program output
+    echo ''
+    # Obtain the project to switch remote.
+    project=$(getArg -a "$@" -k p)
+    if [[ -z "${project}" ]]; then
+        project=$(getArg -a "$@" -k project -l)
+    fi
+    # Obtain the target remote
+    target=$(getArg -a "$@" -k t)
+    if [[ -z "${target}" ]]; then
+        target=$(getArg -a "$@" -k target -l)
+    fi
+
+    # Set root path and check whether it exists
+    local base_path="$SCP_GROUP_DIR"
+    cd "$base_path" || exit
+
+    # calc project_dir
+    project_dir=''
+    if [[ $(has_arg "$*" --all) == "true" || $(has_arg "$*" -a) == "true" ]]; then
+        project_dir="$(ls --)"
+    elif [[ ${project} != '' ]]; then
+        if [[ "${project}" == "demand" ]]; then
+            project_dir="$(ls -d -- scp-"${project}"-*)"
         else
-            fn_log "${dir}: Unsupport protocol,skipped."
-            echo ''
-
+            project_dir="$(ls -d -- *-"${project}"-*)"
         fi
+    else
+        log_error 'Incorrect grammar, you can use like: gr -p|--product product or gr -all|-a'
+        exit 1
+    fi
 
-        if [[ -n "${separator}" && -n "${new_prefix}" ]]; then
-            sub_url=${ori_url#*"${separator}"}
-            sub_url=${sub_url/"$replace_from_separator"/"$replace_to_separator"}
-            new_url=$new_prefix$sub_url
-            log_info "The new git remote of ${dir} is '${new_url}'"
-           
-            cd "${base_path}/${dir}" &&  git remote set-url origin "$new_url"
-            fn_log "${dir}: Switch the protocol of git remote branch from $separator to $new_prefix"
-            echo ''
-        fi
-    }
+    switch_remote_auto "$project_dir" "$target"
+}
 
-done
+main "$*"
