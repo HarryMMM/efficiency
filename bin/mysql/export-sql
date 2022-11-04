@@ -1,0 +1,27 @@
+#!/bin/bash
+CURRENT_DIR=$(
+    cd "$(dirname "$0")" || exit
+    pwd
+)
+source "$CURRENT_DIR/../../config/system/profile"
+# shellcheck source=$CUSTOM_PROFILE_PATH
+source "$CUSTOM_PROFILE_PATH"
+# shellcheck source=LOG_PRINTER_FILE
+source "$LOG_PRINTER_FILE"
+
+port=$(eval echo '$'${db_profile}_port)
+host=$(eval echo '$'${db_profile}_host)
+user=$(eval echo '$'${db_profile}_user)
+password=$(eval echo '$'${db_profile}_password)
+
+function main() {
+    db=$1
+    table=$2
+    where=$3
+    if [[ -n "${where}" ]]; then
+        where="--where=${where}"
+    fi
+    sql=$(mysqldump "$db" "$table" -c --skip-opt -t -N -n --set-gtid-purged=off --skip-comments "$where" -u"${user}" -h"${host}" -p"${port}" -p"${password}" | grep -v '^\/\*![0-9]\{5\}.*\/;$' | grep -v "^$")
+    echo "$sql"
+}
+main "$@"

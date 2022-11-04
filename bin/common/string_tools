@@ -5,7 +5,7 @@ function join_with() {
     if [[ -z "${separator}" ]]; then
         separator=";"
     fi
-   
+
     string_joined=''
     for item in ${string_list}; do
 
@@ -17,4 +17,31 @@ function join_with() {
 
     done
     echo "$string_joined"
+}
+
+# 分割字符，并使用指定字符包裹，再拼接
+function surrond_each_str() {
+    string_list=$1
+    separator=$2
+    surrond_separator=$3
+
+    OLD_IFS="$IFS"
+    IFS="$separator"
+    read -r -a array <<<"$string_list"
+    IFS="$OLD_IFS"
+
+    str=''
+    isFirst=1
+    for var in "${array[@]}"; do
+        if [[ "${isFirst}" == "1" ]]; then
+            str="${surrond_separator}${var}${surrond_separator}"
+            isFirst=0
+        else
+            str="$str$separator${surrond_separator}${var}${surrond_separator}"
+        fi
+
+    done
+
+    echo $str
+
 }

@@ -1,0 +1,116 @@
+#!/bin/bash
+
+########################################################################################################################################
+############# export the sql of price componet configuration, such as price plan, price componet,price plan assign,etc. ################
+########################################################################################################################################
+
+CURRENT_DIR=$(
+    cd "$(dirname "$0")" || exit
+    pwd
+)
+source "$CURRENT_DIR/../../config/system/profile"
+# shellcheck source=$CUSTOM_PROFILE_PATH
+source "$CUSTOM_PROFILE_PATH"
+# shellcheck source=LOG_PRINTER_FILE
+source "$LOG_PRINTER_FILE"
+source "$BIN_DIR"/common/string_tools
+
+# the input arg is the code of price calculation plan , eg: code1,code2~~~
+plan_codes=$1
+export_file=$2
+
+if [[ -z "${plan_codes}" ]]; then
+    log_error 'please enter plan codes.'
+    exit 1
+fi
+
+if [[ ! -f "${export_file}" ]]; then
+    log_error 'please enter the file path you want to export.'
+    exit 1
+fi
+
+############################## prepare  data ###############################
+# Single quotation marks for parameters
+dealed_plan_codes=$(surrond_each_str "$plan_codes" , \')
+
+#query price plan ids for subsequent use
+plan_ids=$(query-sql scp_cost "select group_concat(price_calculation_plan_id) from price_calculation_plan where  code in ($dealed_plan_codes) and delete_flag = 0")
+
+#query price plan assgin ids for subsequent use
+plan_assign_ids=$(query-sql scp_cost "select group_concat(task_price_calculation_plan_assign_id) from task_price_calculation_plan_assign where price_calculation_plan_id in ($plan_ids)  and delete_flag=0")
+
+#query price componet  ids for subsequent use
+price_component_ids=$(query-sql scp_cost "select group_concat(price_component_id) from price_calculation_plan_price_component_ref where price_calculation_plan_id in ($plan_ids)  and delete_flag=0")
+
+#query price componet prices ssgin ids for subsequent use
+price_component_price_ids=$(query-sql scp_cost "select group_concat(price_component_pricing_id) from price_component_pricing where price_component_id in ($price_component_ids)  and delete_flag=0")
+
+############################## begin export ###############################
+# 0 clear old sql
+echo "" >"${export_file}"
+{
+    # No.1 switch database
+    echo '# 切换数据库'
+    echo "use scp_cost"
+    echo ''
+
+    # No.2 export task_price_calculation_plan_assign
+    echo '# 价格计划方案分配表'
+    export-sql scp_cost task_price_calculation_plan_assign "task_price_calculation_plan_assign_id in ($plan_assign_ids) and delete_flag=0"
+    echo ''
+
+    # No.3 export task_price_calculation_plan_assign_category_ref
+    echo '# 价格计划方案分配品类关联表'
+    export-sql scp_cost task_price_calculation_plan_assign_category_ref "task_price_calculation_plan_assign_id in ($plan_assign_ids) and delete_flag=0"
+
+    # No.4 export price_calculation_plan
+    echo '# 价格计划方案表'
+    export-sql scp_cost price_calculation_plan "price_calculation_plan_id in ($plan_ids) and delete_flag=0"
+    echo ''
+
+    # No.5 export price_calculation_plan_price_component_ref
+    echo '# 价格组件表'
+    export-sql scp_cost price_calculation_plan_price_component_ref "price_calculation_plan_id in ($plan_ids) and delete_flag=0"
+    echo ''
+
+    # No.6 export price_component
+    echo '# 价格组件表'
+    export-sql scp_cost price_component "price_component_id in ($price_component_ids) and delete_flag=0"
+    echo ''
+
+    # No.7 export price_component_pricing
+    echo '# 价格定价主表'
+    export-sql scp_cost price_component_pricing "price_component_pricing_id in ($price_component_price_ids) and delete_flag=0"
+    echo ''
+
+    # No.8 export price_component_pricing_category_ref
+    echo '# 价格订票品类关联表'
+    export-sql scp_cost price_component_pricing_category_ref "price_component_pricing_id in ($price_component_price_ids) and delete_flag=0"
+    echo ''
+
+    # No.9 export price_component_pricing_factor_category_ref
+    echo '# 价格定价影响因素品类关联表'
+    export-sql scp_cost price_component_pricing_factor_category_ref "price_component_pricing_id in ($price_component_price_ids) and delete_flag=0"
+    echo ''
+
+    # No.10 export price_component_pricing_factor_detail
+    echo '# 价格定价影响因素明细表'
+    export-sql scp_cost price_component_pricing_factor_detail "price_component_pricing_id in ($price_component_price_ids) and delete_flag=0"
+    echo ''
+
+    # No.11 export price_component_pricing_factor_ref
+    echo '# 价格定价影响因素表'
+    export-sql scp_cost price_component_pricing_factor_ref "price_component_pricing_id in ($price_component_price_ids) and delete_flag=0"
+    echo ''
+
+    # No.12 price_component_pricing_stepwise_ref
+    echo '# 价格定价阶梯价表'
+    export-sql scp_cost price_component_pricing_stepwise_ref "price_component_pricing_id in ($price_component_price_ids) and delete_flag=0"
+    echo ''
+
+    # No.13 export price_component_pricing_supplier_ref
+    echo '# 价格定价供应商表'
+    export-sql scp_cost price_component_pricing_supplier_ref "price_component_pricing_id in ($price_component_price_ids) and delete_flag=0"
+    echo ''
+
+} >>"${export_file}"
