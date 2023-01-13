@@ -42,4 +42,14 @@ function fn_log() {
 		exit 1
 	fi
 }
+
+function fn_log2() {
+	if [ $? -eq 0 ]; then
+		log_info "$1 sucessfully"
+	else
+		log_file=$(basename "$0").log
+		err_message=$(cat "$LOG_DIR"/"${log_file}")
+		log_error "$1 failed , cause: [$err_message]"
+	fi
+}
 trap 'fn_log "DO NOT SEND CTR + C WHEN EXECUTE SCRIPT !!!! "' 2
