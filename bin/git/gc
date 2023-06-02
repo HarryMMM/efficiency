@@ -8,24 +8,70 @@ source "$CURRENT_DIR/../../config/system/profile"
 source "$CUSTOM_PROFILE_PATH"
 # shellcheck source=LOG_PRINTER_FILE
 source "$LOG_PRINTER_FILE"
-
-project=$1
-target_branch=$2
-if [[ ${project} == '' || ${target_branch} == '' ]]; then
-    log_error Incorrect grammar, you can use like: gc product develop
-    exit 1
-fi
+# shellcheck source=ARGS_TOOL_FILE
+source "${ARGS_TOOL_FILE}"
+#根目录
 base_path="$SCP_GROUP_DIR"
-cd "$base_path" || exit 
-project_dir="$(ls -d -- *-"${project}"-*)"
-if [[ "${project}" == "demand" ]]; then
-    project_dir="$(ls -d -- scp-"${project}"-*)"
-fi
-for dir in $project_dir; do
-    {
-        cd "${base_path}/${dir}" && git checkout "${target_branch}" > "$LOG_DIR"/gc.log 2>&1
-        fn_log2 "${dir}: Switch the branch to [${target_branch}]"
-        echo ''
 
-    }
-done
+function help() {
+    cat <<EOF
+usage: gc [-p projectName|-a] <-b branchName>
+e.g.:  gc -p project dev |  gc -a dev
+
+-p The project of the branch you want to switch
+
+-a All projects will perform the specified action
+    
+-b The name of the branch you want to switch to
+EOF
+
+}
+
+function do_checkout() {
+    project_dir=$1
+    branch=$2
+    if [[ -z "${project_dir}" ]]; then
+         log_error "please specify at least one project"
+         exit
+    fi
+    if [[ -z "${branch}" ]]; then
+         log_error "please specify a branch"
+         exit
+    fi
+    
+    for dir in $project_dir; do
+        {
+            # 如果.git目录存在，执行git命令
+            if [ -d "${base_path}/${dir}/.git" ]; then
+                log_info You are about to switch the $dir project to the ${branch} branch
+                cd "${base_path}/${dir}" && git checkout ${branch} >"$LOG_DIR"/gc.log 2>&1
+                fn_log2 "${dir}: checkout"
+                echo ''
+            else
+                log_error "${base_path}/${dir} isn't a git project,skip."
+                echo ''
+            fi
+        }
+    done
+}
+
+function main() {
+    # 进入根目录
+    cd "$base_path" || exit
+    # 如果有指定项目名，切换指定项目名
+    branch=$(getArg -a "$@" -k b)
+    if [[ $(has_arg "$*" -p) == "true" ]]; then
+        project=$(getArg -a "$@" -k p)
+        project_dir="$(ls -d -- *"${project}"*)"
+        do_checkout "${project_dir}" ${branch}
+        # 没有项目名，检查是否切换所有工程
+    elif [[ $(has_arg "$@" -a) == "true" ]]; then
+        project_dir="$(ls -d -- *)"
+        do_checkout "${project_dir}" ${branch}
+    else
+        # 提示帮助
+        help
+    fi
+}
+
+main "$*"

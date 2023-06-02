@@ -8,23 +8,62 @@ source "$CURRENT_DIR/../../config/system/profile"
 source "$CUSTOM_PROFILE_PATH"
 # shellcheck source=LOG_PRINTER_FILE
 source "$LOG_PRINTER_FILE"
-
-project=$1
-if [[ ${project} == '' ]]; then
-    log_error Incorrect grammar, you can use like: gc fetch product
-    exit 1
-fi
+# shellcheck source=ARGS_TOOL_FILE
+source "${ARGS_TOOL_FILE}"
+#根目录
 base_path="$SCP_GROUP_DIR"
-cd "$base_path" || exit 
-project_dir="$(ls -d -- *-"${project}"-*)"
-if [[ "${project}" == "demand" ]]; then
-    project_dir="$(ls -d -- scp-"${project}"-*)"
-fi
-for dir in $project_dir; do
-    {
-        cd "${base_path}/${dir}" && git fetch > "$LOG_DIR"/gf.log 2>&1
-        fn_log "${dir}: fetch"
-        echo ''
 
-    }
-done
+function help() {
+    cat <<EOF
+usage: gf <-p projectName|-a>
+e.g.:  gf -p project |  gc -a
+
+-p The project of the branch you want to fetch
+
+-a All projects will perform the specified action
+    
+EOF
+
+}
+
+function do_fetch() {
+    project_dir=$1
+    if [[ -z "${project_dir}" ]]; then
+        log_error "please specify at least one project"
+        exit
+    fi
+    for dir in $project_dir; do
+        {
+            # 如果.git目录存在，执行git命令
+            if [ -d "${base_path}/${dir}/.git" ]; then
+                log_info You are about to fetch the $dir project
+                cd "${base_path}/${dir}" && git fetch >"$LOG_DIR"/gf.log 2>&1
+                fn_log2 "${dir}: fetch"
+                echo ''
+            else
+                log_error "${base_path}/${dir} isn't a git project,skip."
+                 echo ''
+            fi
+        }
+    done
+}
+
+function main() {
+    # 进入根目录
+    cd "$base_path" || exit
+    # 如果有指定项目名，切换指定项目名
+    if [[ $(has_arg "$*" -p) == "true" ]]; then
+        project=$(getArg -a "$@" -k p)
+        project_dir="$(ls -d -- *"${project}"*)"
+        do_fetch "${project_dir}"
+        # 没有项目名，检查是否切换所有工程
+    elif [[ $(has_arg "$@" -a) == "true" ]]; then
+        project_dir="$(ls -d -- *)"
+        do_fetch "${project_dir}"
+    else
+        # 提示帮助
+        help
+    fi
+}
+
+main "$*"
