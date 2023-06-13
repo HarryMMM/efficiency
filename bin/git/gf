@@ -16,7 +16,7 @@ base_path="$SCP_GROUP_DIR"
 function help() {
     cat <<EOF
 usage: gf <-p projectName|-a>
-e.g.:  gf -p project |  gc -a
+e.g.:  gf -p project |  gf -a
 
 -p The project of the branch you want to fetch
 
