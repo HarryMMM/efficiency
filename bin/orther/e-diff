@@ -4,7 +4,7 @@
 ########################### 比较引擎文件###########################
 ##################################################################
 # 临时目录
-TMP_DIR=G:/engine
+TMP_DIR="$TMP/engine"
 LOG_DIR=$TMP_DIR/log
 TMP_LOG_FILE=$LOG_DIR/tmp.log
 function log_info() {
@@ -79,9 +79,11 @@ function do_diff() {
     #比较 -b 不检查空格字符的不同 -r 比较目录 -q 只输出不同的文件名
     tmp_txt=$LOG_DIR/res.log
     diff -qrb "$LEFT_TMP_DIR" "$RIGHT_TMP_DIR" >$tmp_txt 2>&1
-    res=$(cat "${tmp_txt}")
+    res=$(sort "${tmp_txt}")
     fn_log "比较完成，结果如下："
-    fn_log "\n $(sort "$res")\n"
+    log_info "\n $res\n"
+    log_info '温馨提示可通过如下方式找到你的临时目录：'
+    log_info '1. 按WIN+R 2. 然后在运行中输入 %TEMP% 3. 回车'
 }
 
 function help() {
