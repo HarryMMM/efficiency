@@ -1,2 +1,2 @@
 1. 修改发票脚本
-    for x in *.pdf; do (p=$(echo  "$x" |  sed "s/【\S*-\([0-9]\+\.\?[0-9]*\)元\S*】/\1/g"); mv "$x" "$p") &; done
+    for x in *.pdf; do (p=$(echo  "$x" |  sed "s/【\S*-\([0-9]\+\.\?[0-9]*\)元\S*】/\1/g"); mv "$x" "$p") & done

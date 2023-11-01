@@ -1,0 +1,125 @@
+#!/bin/bash
+
+##################################################################
+########################### 比较引擎文件###########################
+##################################################################
+# 临时目录
+TMP_DIR=G:/engine
+LOG_DIR=$TMP_DIR/log
+TMP_LOG_FILE=$LOG_DIR/tmp.log
+function log_info() {
+    log_prefix=$(basename "$0"):
+    echo -e "\033[32m$log_prefix $*\033[0m"
+}
+
+function log_error() {
+    log_prefix=$(basename "$0"):
+    echo -e "\033[41;37m$log_prefix $*\033[0m"
+}
+
+function fn_log() {
+    if [ $? -eq 0 ]; then
+        log_info "$1 sucessfully"
+    else
+        err_message=$(cat "${TMP_LOG_FILE}")
+        log_error "$1 failed , cause: [$err_message]"
+        exit 1
+    fi
+}
+function do_diff() {
+    LEFT_PATH=$(realpath "$1")
+    log_info Your left path is: "$LEFT_PATH"
+    RIGHT_PATH=$(realpath "$2")
+    log_info Your right path is: "$RIGHT_PATH"
+    
+    #初始化工作目录
+    rm -r $TMP_DIR
+    mkdir -p $TMP_DIR
+    mkdir -p $LOG_DIR
+    LEFT_TMP_DIR=$TMP_DIR/${LEFT_PATH#*business/}
+    log_info Left tmp path is: "$LEFT_TMP_DIR"
+    RIGHT_TMP_DIR=$TMP_DIR/${RIGHT_PATH#*business/}
+    log_info Right tmp path is: "$RIGHT_TMP_DIR"
+    mkdir -p "$LEFT_TMP_DIR"
+    mkdir -p "$RIGHT_TMP_DIR"
+    fn_log "初始化工作目录……"
+
+    # 检查参与比较的目录目录是否存在
+
+    if [ ! -d "$LEFT_PATH" ]; then
+        fn_log "$LEFT_PATH不存在"
+    fi
+
+    if [ ! -d "$RIGHT_PATH" ]; then
+        fn_log "$RIGHT_PATH"
+    fi
+
+    # 复制文件到临时目录
+    find "$LEFT_PATH" -name '*.prc' | sed 's/\\/\\\\/g' | xargs -I{} cp {} "$LEFT_TMP_DIR" >$TMP_LOG_FILE 2>&1
+    find "$RIGHT_PATH" -name '*.prc' | sed 's/\\/\\\\/g' | xargs -I{} cp {} "$RIGHT_TMP_DIR" >$TMP_LOG_FILE 2>&1
+    fn_log "复制文件到临时目录……"
+
+    # 统一文件名# 处理MDS,ODF,ODFS,MDSS关键字
+    fn_log "统一文件名# 处理MDS,ODF,ODFS,MDSS关键字……"
+    cd "$LEFT_TMP_DIR" || exit
+    for x in *.prc; do (
+        p=$(echo "$x" | sed "s/.*PRC_[A-Z]*_//g")
+        mv "$x" "$p"
+        sed -i "s/\(MDS\|ODF\|MDSS\|ODFS\)/HARRY/g" "$p"
+    ) & done
+    cd "$RIGHT_TMP_DIR" || exit
+    for x in *.prc; do (
+        p=$(echo "$x" | sed "s/.*PRC_[A-Z]*_//g")
+        mv "$x" "$p"
+        sed -i "s/\(MDS\|ODF\|MDSS\|ODFS\)/HARRY/g" "$p"
+    ) & done
+
+    wait #等待并发任务结束
+    fn_log "比较中……"
+    #比较 -b 不检查空格字符的不同 -r 比较目录 -q 只输出不同的文件名
+    tmp_txt=$LOG_DIR/res.log
+    diff -qrb "$LEFT_TMP_DIR" "$RIGHT_TMP_DIR" >$tmp_txt 2>&1
+    res=$(cat "${tmp_txt}")
+    fn_log "比较完成，结果如下："
+    fn_log "\n $(sort "$res")\n"
+}
+
+function help() {
+    cat <<EOF
+
+usage: e-diff [OPTIONS] [<args>]
+    eg.
+        e-diff diff PATH1 PATH2
+    options
+        diff Compare the differences between files in two directories
+        help get help
+
+    args
+        -h --help  get help
+        -v--version  get the version of honey  
+EOF
+}
+
+function show_version() {
+    cat <<EOF
+    honey version 0.0.1
+     
+EOF
+}
+function main() {
+    SUB_CMD=$1
+    ORTHER_ARGS="${*:2}"
+
+    case "${SUB_CMD}" in
+    diff)
+        do_diff $ORTHER_ARGS
+        ;;
+    --version | -v)
+        show_version
+        ;;
+    --help | help | -h | *)
+        help
+        ;;
+    esac
+}
+main "$@"
