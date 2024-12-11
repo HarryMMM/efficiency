@@ -1,0 +1,72 @@
+#!/bin/bash
+
+#启动JAVA进程
+THREAD_NUM=$1
+if [ -z $THREAD_NUM ]; then
+    echo "please input the thread nums"
+    exit 1
+fi
+
+echo "THREAD NUM IS $THREAD_NUM"
+PID=$(ps aux | grep ifrs17_cic_measure_engine-1.0-SNAPSHOT.jar | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup' | tr -s ' ' | cut -d ' ' -f 2)
+if [ -n "$PID" ]; then
+    echo "Kill old ifrs17_cic_measure_engine process"
+    sudo kill -9 $PID
+fi
+
+echo "Start ifrs17_cic_measure_engine"
+sudo nohup java -Xms8g -Xmx16g -Dspring.profiles.active=local -Dmeasure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums=$THREAD_NUM -Dmeasure-engine.engines.IC.PAA.ExpectedPolicyCF.shardSize=200000 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=35099 -Dcom.sun.management.jmxremote.rmi.port=7700 -Djava.rmi.server.hostname=39.101.71.152 -jar /app/ifrs17_cic_measure_engine-1.0-SNAPSHOT.jar >>/dev/null 2>&1 &
+
+sleep 1
+#获取进程PID
+echo "Get ifrs17_cic_measure_engine new PID"
+PID=$(ps aux | grep ifrs17_cic_measure_engine-1.0-SNAPSHOT.jar | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup' | tr -s ' ' | cut -d ' ' -f 2)
+
+if ! ps -p $PID >/dev/null; then
+    echo "Process with PID $PID does not exist."
+    exit 1
+fi
+
+# 获取进程的名称
+PROCESS_NAME=$(ps -p $PID -o comm=)
+echo "Monitoring process: $PROCESS_NAME (PID: $PID)"
+
+# 设置监控间隔（秒）
+INTERVAL=5
+
+# 输出表头
+echo -e "Timestamp\tCPU(%)\tMemory(MB)\tNet In(KB/s)\tNet Out(KB/s)\tFull GC Count"
+
+# 初始化网络 IO 数据
+NET_DEV="eth0" # 替换为你的网络接口
+PREV_RX=$(sudo cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
+PREV_TX=$(sudo cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $10}')
+FULL_GC_COUNT=0
+
+while true; do
+    TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
+
+    # 获取 CPU 和内存使用情况
+    CPU=$(top -b -n1 -p $PID | grep $PID | awk '{print $9}')
+    MEM=$(top -b -n1 -p $PID | grep $PID | awk '{print $10}')
+
+    # 获取网络 IO
+    RX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
+    TX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $10}')
+    RX_RATE=$(((RX - PREV_RX) / INTERVAL / 1024))
+    TX_RATE=$(((TX - PREV_TX) / INTERVAL / 1024))
+    PREV_RX=$RX
+    PREV_TX=$TX
+
+    # 获取 Full GC 次数
+    GC_OUTPUT=$(jstat -gc $PID 2>/dev/null)
+    if [ $? -eq 0 ]; then
+        FULL_GC_COUNT=$(echo "$GC_OUTPUT" | awk 'NR==2 {print $13}')
+    fi
+
+    # 打印结果
+    echo -e "$TIMESTAMP\t$CPU\t$MEM\t$RX_RATE\t$TX_RATE\t$FULL_GC_COUNT"
+
+    # 等待指定的间隔
+    sleep $INTERVAL
+done
