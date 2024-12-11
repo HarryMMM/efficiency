@@ -64,7 +64,7 @@ function restart() {
 }
 
 function monitoring() {
-    jar_name=$(getArg -a "$@" -k m)
+    jar_name=$(getArg -a "$@" -k j)
     if [[ -z "$jar_name" ]]; then
         jar_name=$JAR_NAME
     fi
@@ -117,7 +117,7 @@ function monitoring() {
             echo -e "Timestamp\t\tCPU(%)\tMemory(MB)\tNet In(KB/s)\tNet Out(KB/s)\tFull GC Count"
         fi
 
-        echo -e "$TIMESTAMP\t$CPU\t$MEM\t$RX_RATE\t$TX_RATE\t$FULL_GC_COUNT"
+        echo -e "$TIMESTAMP\t$CPU\t$MEM\t\t$RX_RATE\t\t$TX_RATE\t\t$FULL_GC_COUNT"
         ((count++))
         # 等待指定的间隔
         sleep $INTERVAL
@@ -203,9 +203,13 @@ function has_arg() {
 function help() {
     cat <<EOF
 
-usage: jmonitor [sub_cmd|options]>
+usage: jmonitor <sub_cmd> [options]
 e.g.:  jmonitor restart -j xxx.jar|jmonitor -j xxx.jar
+sub_cmd:
+    restart: restart a app
+    monitor: monitor a app
 
+options:
     -j Specify a jar name like this: jmonitor -r xxx.jar or jmonitor -r
 
     -t Set the value of measure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums,must specify -r flag first
@@ -217,21 +221,22 @@ e.g.:  jmonitor restart -j xxx.jar|jmonitor -j xxx.jar
     -m Monitor a jvm process, you can specify a jar name like this: jmonitor -m xxx.jar or jmonitor -m
     
 EOF
-
 }
 
 function main() {
     sub_cmd=$1
     orther_args="${*:2}"
-    # 如果有指定项目名，切换指定项目名
-    if [[ $sub_cmd == "restart" ]]; then
+     case "${sub_cmd}" in
+    restart)
         restart "$orther_args"
-    elif [[ $(has_arg "$@" -m) == "true" ]]; then
-        monitoring "$orther_args"
-    else
-        # 提示帮助
+        ;;
+    monitor)
+         monitoring "$orther_args"
+        ;;
+    *)
         help
-    fi
+        ;;
+    esac
 }
 
 main "$@"
