@@ -204,7 +204,7 @@ function help() {
     cat <<EOF
 
 usage: jmonitor <sub_cmd> [options]
-e.g.:  jmonitor restart -j xxx.jar|jmonitor -j xxx.jar
+
 sub_cmd:
     restart: restart a app, e.g. jmonitor restart -j xx.jar
     monitor: monitor a app, e.g. jmonitor monitor -j xx.jar
