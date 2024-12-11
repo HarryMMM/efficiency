@@ -1,0 +1,234 @@
+#!/bin/bash
+
+####################################################### 默认配置 ########################################################
+ROOT_PATH=/app
+PROFILE_ACTIVE=local
+DATASOURCE_URL='jdbc:postgresql://pgm-0jlh2idch5i2vjg2.pg.rds.aliyuncs.com:5432/front?currentSchema=ifrs17_pi_dev'
+JAR_NAME='ifrs17_cic_measure_engine-1.0-SNAPSHOT.jar'
+
+# 核心线程数
+THREAD_NUM=5
+# 分片大小
+SHARD_SIZE=200000
+# 入库批次大小
+WRITE_SIZE=5000
+########################################################################################################################
+
+# 重启进程
+function restart() {
+    jar_name=$(getArg -a "$@" -k r)
+    echo "fffffffffffff$jar_name"
+    thread_num=$(getArg -a "$@" -k t)
+    shard_size=$(getArg -a "$@" -k s)
+    write_size=$(getArg -a "$@" -k w)
+    if [[ -z "$jar_name" ]]; then
+        jar_name=$JAR_NAME
+    fi
+    if [[ -z "$thread_num" ]]; then
+        thread_num=$THREAD_NUM
+    fi
+    if [[ -z "$shard_size" ]]; then
+        shard_size=$SHARD_SIZE
+    fi
+    if [[ -z "$write_size" ]]; then
+        write_size=$WRITE_SIZE
+    fi
+    
+    sudo ps aux | grep "${jar_name}" | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup'
+    PID=$(sudo ps aux | grep "${jar_name}" | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup' | tr -s ' ' | cut -d ' ' -f 2)
+    if [ -n "$PID" ]; then
+        echo "Kill old $jar_name (PID: $PID)..."
+        # sudo kill -9 "$PID"
+    fi
+    
+    echo "Start $ROOT_PATH/$jar_name... active is $PROFILE_ACTIVE,thread number is $thread_num,shardind size is $shard_size,write size is $write_size"
+    sudo nohup java -Xms8g -Xmx16g -Dspring.profiles.active="$PROFILE_ACTIVE" \
+        -Dmeasure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums="$thread_num" \
+        -Dmeasure-engine.engines.IC.PAA.ExpectedPolicyCF.shardingSize="$shard_size" \
+        -Dmeasure-engine.writeSize="${write_size}" \
+        -Dspring.datasource.url="${DATASOURCE_URL}" \
+        -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.ssl=false \
+        -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=35099 \
+        -Dcom.sun.management.jmxremote.rmi.port=7700 \
+        -Djava.rmi.server.hostname=39.101.71.152 -jar \
+        "$ROOT_PATH/$jar_name" >>/dev/null 2>&1 &
+
+    PID=$(sudo ps aux | grep "$jar_name" | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup' | tr -s ' ' | cut -d ' ' -f 2)
+    echo "The datasorce url is $DATASOURCE_URL"    
+    echo "The $jar_name started, the process is $PID"
+    
+}
+
+function monitoring() {
+    jar_name=$(getArg -a "$@" -k m)
+    if [[ -z "$jar_name" ]]; then
+        jar_name=$JAR_NAME
+    fi
+    #获取进程PID
+    PID=$(sudo ps aux | grep $jar_name | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup' | tr -s ' ' | cut -d ' ' -f 2)
+    if ! ps -p $PID >/dev/null; then
+        echo "Process with PID $PID does not exist."
+        exit 1
+    fi
+
+    # 获取进程的名称
+    PROCESS_NAME=$(ps -p $PID -o comm=)
+    echo "Monitoring process: $PROCESS_NAME (PID: $PID)"
+
+    # 设置监控间隔（秒）
+    INTERVAL=5
+
+    count=0
+    # 初始化网络 IO 数据
+    NET_DEV="eth0" # 替换为你的网络接口
+    PREV_RX=$(sudo cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
+    PREV_TX=$(sudo cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $10}')
+    FULL_GC_COUNT=0
+
+    while true; do
+        TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
+
+        # 获取 CPU 和内存使用情况
+        CPU=$(sudo top -b -n1 -p $PID | grep $PID | awk '{print $9}')
+        MEM=$(sudo top -b -n1 -p $PID | grep $PID | awk '{print $10}')
+
+        # 获取网络 IO
+        RX=$(sudo cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
+        TX=$(sudo cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $10}')
+        RX_RATE=$(((RX - PREV_RX) / INTERVAL / 1024))
+        TX_RATE=$(((TX - PREV_TX) / INTERVAL / 1024))
+        PREV_RX=$RX
+        PREV_TX=$TX
+
+        # 获取 Full GC 次数
+        GC_OUTPUT=$(sudo jstat -gc $PID 2>/dev/null)
+        if [ $? -eq 0 ]; then
+            FULL_GC_COUNT=$(echo "$GC_OUTPUT" | awk 'NR==2 {print $13}')
+        fi
+
+        # 打印结果
+        remainder=$((count % 15))
+        if (($remainder == 0)); then
+            # 输出表头
+            echo -e "Timestamp\t\tCPU(%)\tMemory(MB)\tNet In(KB/s)\tNet Out(KB/s)\tFull GC Count"
+        fi
+
+        echo -e "$TIMESTAMP\t$CPU\t$MEM\t$RX_RATE\t$TX_RATE\t$FULL_GC_COUNT"
+        ((count++))
+        # 等待指定的间隔
+        sleep $INTERVAL
+    done
+}
+
+ARGS=''
+ARG_KEY=''
+ARG_PREFIX='-'
+function doGetArg() {
+    local val=''
+    while true; do
+        case "$1" in
+        "${ARG_PREFIX}${ARG_KEY}")
+            val="$2"
+            break
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            shift
+            ;;
+        esac
+    done
+    echo "${val}"
+}
+function getArg() {
+    local val=''
+    parse_args "$@"
+
+    if [[ -z "${ARGS}" ]]; then
+        echo ''
+    fi
+
+    if [[ -z "${ARG_KEY}" ]]; then
+        echo ''
+    fi
+
+    parameters=$(getopt -u -q -o "${ARG_KEY}:" -l "${ARG_KEY}:" -- $ARGS)
+
+    doGetArg $parameters
+
+}
+
+function parse_args() {
+    parameters=$(getopt -o 'l,a:,k:' -n "$0" -- "$@")
+    eval set -- "$parameters"
+    while true; do
+        case "$1" in
+        -a | args)
+            ARGS="$2"
+            shift 2
+            ;;
+        -l | long)
+            ARG_PREFIX="--"
+            shift
+            ;;
+
+        -k | --arg-key)
+            ARG_KEY="$2"
+            shift 2
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            shift
+            ;;
+        esac
+    done
+}
+function has_arg() {
+    if [[ "$1" == *"$2"* ]]; then
+        echo "true"
+    else
+        echo 'false'
+    fi
+}
+
+function help() {
+    cat <<EOF
+
+usage: monitor [options]>
+e.g.:  monitor -r xxx.jar
+
+    -r Restart a jar, you can specify a jar name like this: jmonitor -r xxx.jar or jmonitor -r
+
+    -t Set the value of measure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums,must specify -r flag first
+
+    -s Set the value of measure-engine.engines.IC.PAA.ExpectedPolicyCF.shardingSize,must specify -r flag first
+
+    -w Set the value of measure-engine.writeSize,must specify -r flag first
+
+    -m Monitor a jvm process, you can specify a jar name like this: jmonitor -m xxx.jar or jmonitor -m
+    
+EOF
+
+}
+
+function main() {
+    # 如果有指定项目名，切换指定项目名
+    if [[ $(has_arg "$*" -r) == "true" ]]; then
+        restart "$*"
+    elif [[ $(has_arg "$@" -m) == "true" ]]; then
+        monitoring
+    elif [[ $(has_arg "$@" -m) == "true" && $(has_arg "$*" -r) == "true" ]]; then
+        restart "$*"
+        monitoring "$*"
+    else
+        # 提示帮助
+        help
+    fi
+}
+
+main "$*"
