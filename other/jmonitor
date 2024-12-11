@@ -206,20 +206,18 @@ function help() {
 usage: jmonitor <sub_cmd> [options]
 e.g.:  jmonitor restart -j xxx.jar|jmonitor -j xxx.jar
 sub_cmd:
-    restart: restart a app
-    monitor: monitor a app
+    restart: restart a app, e.g. jmonitor restart -j xx.jar
+    monitor: monitor a app, e.g. jmonitor monitor -j xx.jar
 
 options:
-    -j Specify a jar name like this: jmonitor -r xxx.jar or jmonitor -r
+    -j Specify a jar name
 
-    -t Set the value of measure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums,must specify -r flag first
+    -t Set the value of measure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums,only used to restart sub command
 
-    -s Set the value of measure-engine.engines.IC.PAA.ExpectedPolicyCF.shardingSize,must specify -r flag first
+    -s Set the value of measure-engine.engines.IC.PAA.ExpectedPolicyCF.shardingSize,only used to restart sub command
 
-    -w Set the value of measure-engine.writeSize,must specify -r flag first
+    -w Set the value of measure-engine.writeSize,only used to restart sub command
 
-    -m Monitor a jvm process, you can specify a jar name like this: jmonitor -m xxx.jar or jmonitor -m
-    
 EOF
 }
 
