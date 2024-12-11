@@ -14,10 +14,15 @@ SHARD_SIZE=200000
 WRITE_SIZE=5000
 ########################################################################################################################
 
+function getPid() {
+    jar_name=$1
+    PID=$(ps aux | grep "${jar_name}" | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup' | grep -v 'jmonitor' | tr -s ' ' | cut -d ' ' -f 2)
+    echo "$PID"
+}
+
 # 重启进程
 function restart() {
-    jar_name=$(getArg -a "$@" -k r)
-    echo "fffffffffffff$jar_name"
+    jar_name=$(getArg -a "$@" -k j)
     thread_num=$(getArg -a "$@" -k t)
     shard_size=$(getArg -a "$@" -k s)
     write_size=$(getArg -a "$@" -k w)
@@ -33,16 +38,15 @@ function restart() {
     if [[ -z "$write_size" ]]; then
         write_size=$WRITE_SIZE
     fi
-    
-    sudo ps aux | grep "${jar_name}" | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup'
-    PID=$(sudo ps aux | grep "${jar_name}" | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup' | tr -s ' ' | cut -d ' ' -f 2)
+
+    PID=$(getPid "$jar_name")
     if [ -n "$PID" ]; then
         echo "Kill old $jar_name (PID: $PID)..."
-        # sudo kill -9 "$PID"
+        kill -9 "$PID"
     fi
-    
+
     echo "Start $ROOT_PATH/$jar_name... active is $PROFILE_ACTIVE,thread number is $thread_num,shardind size is $shard_size,write size is $write_size"
-    sudo nohup java -Xms8g -Xmx16g -Dspring.profiles.active="$PROFILE_ACTIVE" \
+    nohup java -Xms8g -Xmx16g -Dspring.profiles.active="$PROFILE_ACTIVE" \
         -Dmeasure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums="$thread_num" \
         -Dmeasure-engine.engines.IC.PAA.ExpectedPolicyCF.shardingSize="$shard_size" \
         -Dmeasure-engine.writeSize="${write_size}" \
@@ -53,10 +57,10 @@ function restart() {
         -Djava.rmi.server.hostname=39.101.71.152 -jar \
         "$ROOT_PATH/$jar_name" >>/dev/null 2>&1 &
 
-    PID=$(sudo ps aux | grep "$jar_name" | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup' | tr -s ' ' | cut -d ' ' -f 2)
-    echo "The datasorce url is $DATASOURCE_URL"    
+    PID=$(getPid "$jar_name")
+    echo "The datasorce url is $DATASOURCE_URL"
     echo "The $jar_name started, the process is $PID"
-    
+
 }
 
 function monitoring() {
@@ -65,7 +69,7 @@ function monitoring() {
         jar_name=$JAR_NAME
     fi
     #获取进程PID
-    PID=$(sudo ps aux | grep $jar_name | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup' | tr -s ' ' | cut -d ' ' -f 2)
+    PID=$(getPid "$jar_name")
     if ! ps -p $PID >/dev/null; then
         echo "Process with PID $PID does not exist."
         exit 1
@@ -81,27 +85,27 @@ function monitoring() {
     count=0
     # 初始化网络 IO 数据
     NET_DEV="eth0" # 替换为你的网络接口
-    PREV_RX=$(sudo cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
-    PREV_TX=$(sudo cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $10}')
+    PREV_RX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
+    PREV_TX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $10}')
     FULL_GC_COUNT=0
 
     while true; do
         TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
 
         # 获取 CPU 和内存使用情况
-        CPU=$(sudo top -b -n1 -p $PID | grep $PID | awk '{print $9}')
-        MEM=$(sudo top -b -n1 -p $PID | grep $PID | awk '{print $10}')
+        CPU=$(top -b -n1 -p $PID | grep $PID | awk '{print $9}')
+        MEM=$(top -b -n1 -p $PID | grep $PID | awk '{print $10}')
 
         # 获取网络 IO
-        RX=$(sudo cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
-        TX=$(sudo cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $10}')
+        RX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
+        TX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $10}')
         RX_RATE=$(((RX - PREV_RX) / INTERVAL / 1024))
         TX_RATE=$(((TX - PREV_TX) / INTERVAL / 1024))
         PREV_RX=$RX
         PREV_TX=$TX
 
         # 获取 Full GC 次数
-        GC_OUTPUT=$(sudo jstat -gc $PID 2>/dev/null)
+        GC_OUTPUT=$(jstat -gc $PID 2>/dev/null)
         if [ $? -eq 0 ]; then
             FULL_GC_COUNT=$(echo "$GC_OUTPUT" | awk 'NR==2 {print $13}')
         fi
@@ -199,10 +203,10 @@ function has_arg() {
 function help() {
     cat <<EOF
 
-usage: monitor [options]>
-e.g.:  monitor -r xxx.jar
+usage: jmonitor [sub_cmd|options]>
+e.g.:  jmonitor restart -j xxx.jar|jmonitor -j xxx.jar
 
-    -r Restart a jar, you can specify a jar name like this: jmonitor -r xxx.jar or jmonitor -r
+    -j Specify a jar name like this: jmonitor -r xxx.jar or jmonitor -r
 
     -t Set the value of measure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums,must specify -r flag first
 
@@ -217,18 +221,17 @@ EOF
 }
 
 function main() {
+    sub_cmd=$1
+    orther_args="${*:2}"
     # 如果有指定项目名，切换指定项目名
-    if [[ $(has_arg "$*" -r) == "true" ]]; then
-        restart "$*"
+    if [[ $sub_cmd == "restart" ]]; then
+        restart "$orther_args"
     elif [[ $(has_arg "$@" -m) == "true" ]]; then
-        monitoring
-    elif [[ $(has_arg "$@" -m) == "true" && $(has_arg "$*" -r) == "true" ]]; then
-        restart "$*"
-        monitoring "$*"
+        monitoring "$orther_args"
     else
         # 提示帮助
         help
     fi
 }
 
-main "$*"
+main "$@"
