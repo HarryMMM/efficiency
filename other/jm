@@ -3,11 +3,11 @@
 ####################################################### 默认配置 ########################################################
 ROOT_PATH=/app
 PROFILE_ACTIVE=local
-DATASOURCE_URL='jdbc:postgresql://pgm-0jlh2idch5i2vjg2.pg.rds.aliyuncs.com:5432/front?currentSchema=ifrs17_pi_dev'
+DATASOURCE_URL='jdbc:postgresql://pgm-0jlh2idch5i2vjg2.pg.rds.aliyuncs.com:5432/front?currentSchema=ifrs17_pi_dev_perf'
 JAR_NAME='ifrs17_cic_measure_engine-1.0-SNAPSHOT.jar'
 
 # 核心线程数
-THREAD_NUM=5
+THREAD_NUM=1
 # 分片大小
 SHARD_SIZE=200000
 # 入库批次大小
