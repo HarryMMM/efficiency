@@ -95,13 +95,13 @@ function monitoring() {
 
         # 获取 CPU 和内存使用情况
         CPU=$(top -b -n1 -p $PID | grep $PID | awk '{print $9}')
-        MEM=$(top -b -n1 -p $PID | grep $PID | awk '{print $10}')
+        MEM=$(top -b -n1 -p $PID | grep $PID | awk '{print $6}')
 
         # 获取网络 IO
         RX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
         TX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $10}')
-        RX_RATE=$(((RX - PREV_RX) / INTERVAL / 1024))
-        TX_RATE=$(((TX - PREV_TX) / INTERVAL / 1024))
+        RX_RATE=$(((RX - PREV_RX) / INTERVAL / 1024 / 1024))
+        TX_RATE=$(((TX - PREV_TX) / INTERVAL / 1024 / 1024))
         PREV_RX=$RX
         PREV_TX=$TX
 
@@ -116,7 +116,7 @@ function monitoring() {
         remainder=$((count % 15))
         if (($remainder == 0)); then
             # 输出表头
-            echo -e "Timestamp\t\tCPU(%)\tMemory(MB)\tNet In(KB/s)\tNet Out(KB/s)\tYong GC Count\tFull GC Count"
+            echo -e "Timestamp\t\tCPU(%)\tMemory(MB)\tNet In(MB/s)\tNet Out(MB/s)\tYong GC Count\tFull GC Count"
         fi
 
         echo -e "$TIMESTAMP\t$CPU\t$MEM\t\t$RX_RATE\t\t$TX_RATE\t\t$YONG_GC_COUNT\t\t$FULL_GC_COUNT"
