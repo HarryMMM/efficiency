@@ -46,7 +46,7 @@ function restart() {
     fi
 
     echo "Start $ROOT_PATH/$jar_name... active is $PROFILE_ACTIVE,thread number is $thread_num,shardind size is $shard_size,write size is $write_size"
-    nohup java -Xms8g -Xmx16g -Dspring.profiles.active="$PROFILE_ACTIVE" \
+    nohup java -Xms16g -Xmx32g -Dspring.profiles.active="$PROFILE_ACTIVE" \
         -Dmeasure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums="$thread_num" \
         -Dmeasure-engine.engines.IC.PAA.ExpectedPolicyCF.shardingSize="$shard_size" \
         -Dmeasure-engine.writeSize="${write_size}" \
