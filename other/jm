@@ -16,7 +16,7 @@ WRITE_SIZE=5000
 
 function getPid() {
     jar_name=$1
-    PID=$(ps aux | grep "${jar_name}" | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup' | grep -v 'jm' | tr -s ' ' | cut -d ' ' -f 2)
+    PID=$(ps aux | grep "${jar_name}" | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup' | tr -s ' ' | cut -d ' ' -f 2)
     echo "$PID"
 }
 
@@ -59,7 +59,7 @@ function restart() {
 
     PID=$(getPid "$jar_name")
     echo "The datasorce url is $DATASOURCE_URL"
-    echo "The $jar_name started, the process is $PID"
+    echo "The $jar_name started (PID: $PID)."
 
 }
 
@@ -226,12 +226,12 @@ EOF
 function main() {
     sub_cmd=$1
     orther_args="${*:2}"
-     case "${sub_cmd}" in
+    case "${sub_cmd}" in
     restart)
         restart "$orther_args"
         ;;
     monitor)
-         monitoring "$orther_args"
+        monitoring "$orther_args"
         ;;
     *)
         help
