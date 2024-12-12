@@ -16,7 +16,7 @@ WRITE_SIZE=5000
 
 function getPid() {
     jar_name=$1
-    PID=$(ps aux | grep "${jar_name}" | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup' | grep -v 'jmonitor' | tr -s ' ' | cut -d ' ' -f 2)
+    PID=$(ps aux | grep "${jar_name}" | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup' | grep -v 'jm' | tr -s ' ' | cut -d ' ' -f 2)
     echo "$PID"
 }
 
@@ -205,11 +205,11 @@ function has_arg() {
 function help() {
     cat <<EOF
 
-usage: jmonitor <sub_cmd> [options]
+usage: jm <sub_cmd> [options]
 
 sub_cmd:
-    restart: restart a app, e.g. jmonitor restart -j xx.jar
-    monitor: monitor a app, e.g. jmonitor monitor -j xx.jar
+    restart: restart a app, e.g. jm restart -j xx.jar
+    monitor: monitor a app, e.g. jm monitor -j xx.jar
 
 options:
     -j Specify a jar name
