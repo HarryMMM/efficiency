@@ -35,7 +35,7 @@ function restart() {
     # read -r -a jvm_options <<< "$JVM_OPTIONS"
     # echo "${jvm_options[@]}"
     # nohup java "${jvm_options[@]}" -jar "$jar_name" >/dev/null 2>$ERROR_LOG &
-    nohup java $JVM_OPTIONS -jar "$jar_name" >>/dev/null 2>&1 &
+    nohup java $JVM_OPTIONS -jar "$APP_PATH/$jar_name" >>/dev/null 2>&1 &
     PID=$(getPid "$jar_name")
     fn_log "The $jar_name started (PID: $PID)"
 }
@@ -55,7 +55,7 @@ function monitoring() {
 
     # 获取进程的名称
     PROCESS_NAME=$(ps -p $PID -o comm=)
-    fn_log "Monitoring process: $PROCESS_NAME (PID: $PID)"
+    log_info "Monitoring process: $PROCESS_NAME (PID: $PID)"
 
     # 设置监控间隔（秒）
     INTERVAL=5
@@ -228,14 +228,15 @@ function fn_log() {
 
 function check_profile() {
     if [[ ! -e $PROFILE_FILE ]]; then
-        fn_log "Jmonitor Tools has not been configured yet, please use [jm -h] to check how to configure it."
+        log_info "Jmonitor Tools has not been configured yet, please use [jm -h] to check how to configure it."
         exit 1
     fi
 }
 
 function do_init_profile() {
     cat <<EOF >$PROFILE_FILE
-JAR_NAME='/app/ifrs17_cic_measure_engine-1.0-SNAPSHOT.jar'
+APP_PATH='/app'    
+JAR_NAME='ifrs17_cic_measure_engine-1.0-SNAPSHOT.jar'
 JVM_OPTIONS='
 -Xms16g -Xmx32g 
 -Dspring.datasource.url=jdbc:postgresql://pgm-0jlh2idch5i2vjg2.pg.rds.aliyuncs.com:5432/front?currentSchema=ifrs17_pi_dev_perf
