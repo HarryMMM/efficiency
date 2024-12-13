@@ -32,7 +32,6 @@ function restart() {
     log_info "Start $jar_name..."
 
     #将字符串解析为多个参数的变量
-    echo "$JVM_OPTIONS"
     # read -r -a jvm_options <<< "$JVM_OPTIONS"
     # echo "${jvm_options[@]}"
     # nohup java "${jvm_options[@]}" -jar "$jar_name" >/dev/null 2>$ERROR_LOG &
