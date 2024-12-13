@@ -4,6 +4,7 @@
 # 使用$(eval echo ~$SUDO_USER)获取用户家目录，避免sudo执行时获取到root的家目录
 PROFILE_FILE=$(eval echo ~$SUDO_USER)/.jm_profile
 ERROR_LOG=/tmp/error.log
+mkdir -p $ERROR_LOG
 if [[ -e $PROFILE_FILE ]]; then
     source $PROFILE_FILE
 fi
