@@ -35,7 +35,7 @@ function restart() {
     # read -r -a jvm_options <<< "$JVM_OPTIONS"
     # echo "${jvm_options[@]}"
     # nohup java "${jvm_options[@]}" -jar "$jar_name" >/dev/null 2>$ERROR_LOG &
-    nohup java $JVM_OPTIONS -jar "$jar_name" >/dev/null 2>$ERROR_LOG &
+    nohup java $JVM_OPTIONS -jar "$jar_name" >>/dev/null 2>&1 &
     PID=$(getPid "$jar_name")
     fn_log "The $jar_name started (PID: $PID)"
 }
