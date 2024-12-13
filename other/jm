@@ -1,17 +1,10 @@
 #!/bin/bash
 
-####################################################### 默认配置 ########################################################
-ROOT_PATH=/app
-PROFILE_ACTIVE=local
-DATASOURCE_URL='jdbc:postgresql://pgm-0jlh2idch5i2vjg2.pg.rds.aliyuncs.com:5432/front?currentSchema=ifrs17_pi_dev_perf'
-JAR_NAME='ifrs17_cic_measure_engine-1.0-SNAPSHOT.jar'
-
-# 核心线程数
-THREAD_NUM=1
-# 分片大小
-SHARD_SIZE=200000
-# 入库批次大小
-WRITE_SIZE=5000
+####################################################### 加载配置文件 ########################################################
+PROFILE_FILE=$HOME/.jm_profile
+if [[ -e $PROFILE_FILE ]]; then
+    source $PROFILE_FILE
+fi
 ########################################################################################################################
 
 function getPid() {
@@ -22,62 +15,42 @@ function getPid() {
 
 # 重启进程
 function restart() {
-    jar_name=$(getArg -a "$@" -k j)
-    thread_num=$(getArg -a "$@" -k t)
-    shard_size=$(getArg -a "$@" -k s)
-    write_size=$(getArg -a "$@" -k w)
+    jar_name="$JAR_NAME"
     if [[ -z "$jar_name" ]]; then
-        jar_name=$JAR_NAME
+        fn_log 'The JAVA_NAME have not been configured, please use [jm cfg] command to configure the jar name'
+        exit 1
     fi
-    if [[ -z "$thread_num" ]]; then
-        thread_num=$THREAD_NUM
-    fi
-    if [[ -z "$shard_size" ]]; then
-        shard_size=$SHARD_SIZE
-    fi
-    if [[ -z "$write_size" ]]; then
-        write_size=$WRITE_SIZE
-    fi
-
     PID=$(getPid "$jar_name")
     if [ -n "$PID" ]; then
-        echo "Kill old $jar_name (PID: $PID)..."
-        kill -9 "$PID"
-    fi
+        error=$(kill -9 "$PID" 2>&1)
 
-    echo "Start $ROOT_PATH/$jar_name... active is $PROFILE_ACTIVE,thread number is $thread_num,shardind size is $shard_size,write size is $write_size"
-    nohup java -Xms16g -Xmx32g -Dspring.profiles.active="$PROFILE_ACTIVE" \
-        -Dmeasure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums="$thread_num" \
-        -Dmeasure-engine.engines.IC.PAA.ExpectedPolicyCF.shardingSize="$shard_size" \
-        -Dmeasure-engine.writeSize="${write_size}" \
-        -Dspring.datasource.url="${DATASOURCE_URL}" \
-        -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.ssl=false \
-        -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=35099 \
-        -Dcom.sun.management.jmxremote.rmi.port=7700 \
-        -Djava.rmi.server.hostname=39.101.71.152 -jar \
-        "$ROOT_PATH/$jar_name" >>/dev/null 2>&1 &
+        fn_log "Kill old $jar_name (PID: $PID)..." "$error"
+    fi
+    JVM_OPTIONS=$(echo "$JVM_OPTIONS" | tr '\n' ' ')
+    fn_log "Start $jar_name...The jvm options is $JVM_OPTIONS"
+    nohup java "$JVM_OPTIONS" -jar "$jar_name" >>/dev/null 2>&1 &
 
     PID=$(getPid "$jar_name")
-    echo "The datasorce url is $DATASOURCE_URL"
-    echo "The $jar_name started (PID: $PID)."
+    fn_log "The $jar_name started (PID: $PID)."
 
 }
 
 function monitoring() {
-    jar_name=$(getArg -a "$@" -k j)
+    jar_name="$JAR_NAME"
     if [[ -z "$jar_name" ]]; then
-        jar_name=$JAR_NAME
+        fn_log 'The JAVA_NAME have not been configured, please use [jm cfg] command to configure the jar name'
+        exit 1
     fi
     #获取进程PID
     PID=$(getPid "$jar_name")
     if ! ps -p $PID >/dev/null; then
-        echo "Process with PID $PID does not exist."
+        fn_log "Process with PID $PID does not exist."
         exit 1
     fi
 
     # 获取进程的名称
     PROCESS_NAME=$(ps -p $PID -o comm=)
-    echo "Monitoring process: $PROCESS_NAME (PID: $PID)"
+    fn_log "Monitoring process: $PROCESS_NAME (PID: $PID)"
 
     # 设置监控间隔（秒）
     INTERVAL=5
@@ -95,7 +68,7 @@ function monitoring() {
 
         # 获取 CPU 和内存使用情况
         CPU=$(top -b -n1 -p $PID | grep $PID | awk '{print $9}')
-        MEM=$(top -b -n1 -p $PID | grep $PID | awk '{print $6}' |sed 's/g//')
+        MEM=$(top -b -n1 -p $PID | grep $PID | awk '{print $6}' | sed 's/g//')
 
         # 获取网络 IO
         RX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
@@ -203,35 +176,98 @@ function has_arg() {
 }
 
 function help() {
-    cat <<EOF
+    echo -e "
+\033[32mWelcome to jmonitor tools!\033[0m
 
-usage: jm <sub_cmd> [options]
+usage: jm <sub_cmd>
 
 sub_cmd:
-    restart: restart a app, e.g. jm restart -j xx.jar
-    monitor: monitor a app, e.g. jm monitor -j xx.jar
+    \033[33mrst\033[0m restart a app, e.g. jm rst
+    \033[33mmon\033[0m monitor a app, e.g. jm mon
+    \033[33mcfg\033[0m Configure the JMonitor Tools e.g. jm cfg
+    \033[33mini\033[0m Initionlized JMonitor Tools' configuration,
+        the old configuration will be overwritten e.g. jm ini
 
-options:
-    -j Specify a jar name
+"
+}
 
-    -t Set the value of measure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums,only used to restart sub command
+function log_info() {
+    log_prefix=JMonitor:
+    echo -e "\033[32m$log_prefix $*\033[0m"
+}
 
-    -s Set the value of measure-engine.engines.IC.PAA.ExpectedPolicyCF.shardingSize,only used to restart sub command
+function log_error() {
+    log_prefix=JMonitor:
+    echo -e "\033[31m$log_prefix $*\033[0m"
+}
 
-    -w Set the value of measure-engine.writeSize,only used to restart sub command
+function fn_log() {
+    if [ $? -eq 0 ]; then
+        log_info "$1"
+    else
+        log_error "$1 failed , cause: [$2]"
+        exit 1
+    fi
+}
 
+function check_profile() {
+    if [[ ! -e $PROFILE_FILE ]]; then
+        fn_log "Jmonitor Tools has not been configured yet, please use [jm -h] to check how to configure it."
+        exit 1
+    fi
+}
+
+function do_init_profile() {
+    cat <<EOF >$PROFILE_FILE
+JAR_NAME='/app/ifrs17_cic_measure_engine-1.0-SNAPSHOT.jar'
+JVM_OPTIONS='
+-Xms96g -Xmx110g 
+-Djdbc:postgresql://pgm-0jlh2idch5i2vjg2.pg.rds.aliyuncs.com:5432/front?currentSchema=ifrs17_pi_dev_perf
+-Dspring.profiles.active=local
+-Dmeasure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums=32
+-Dmeasure-engine.engines.IC.PAA.ExpectedPolicyCF.shardingSize=100000
+-Dmeasure-engine.writeSize=5000
+-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.ssl=false
+-Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=35099
+-Dcom.sun.management.jmxremote.rmi.port=7700
+-Djava.rmi.server.hostname=39.101.71.152 
+'
 EOF
+    fn_log "The configuration file initialized, please use [jm cfg] command to configure the JMonitor Tools"
+}
+
+function init_profile() {
+    if [[ ! -e $PROFILE_FILE ]]; then
+        fn_log "Initialize the configuration file..."
+        do_init_profile
+    fi
 }
 
 function main() {
+    #获取子命令和参数
     sub_cmd=$1
     orther_args="${*:2}"
     case "${sub_cmd}" in
-    restart)
+    rst)
+        # 前置检查
+        check_profile
         restart "$orther_args"
         ;;
-    monitor)
+    mon)
+        # 前置检查
+        check_profile
         monitoring "$orther_args"
+        ;;
+    cfg)
+        init_profile
+        vim $PROFILE_FILE
+        ;;
+    ini)
+        do_init_profile
+        vim $PROFILE_FILE
+        ;;
+    -h)
+        help
         ;;
     *)
         help
