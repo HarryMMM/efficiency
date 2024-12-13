@@ -3,6 +3,7 @@
 ####################################################### 加载配置文件 ########################################################
 # 使用$(eval echo ~$SUDO_USER)获取用户家目录，避免sudo执行时获取到root的家目录
 PROFILE_FILE=$(eval echo ~$SUDO_USER)/.jm_profile
+ERROR_LOG=/tmp/error.log
 if [[ -e $PROFILE_FILE ]]; then
     source $PROFILE_FILE
 fi
@@ -18,23 +19,26 @@ function getPid() {
 function restart() {
     jar_name="$JAR_NAME"
     if [[ -z "$jar_name" ]]; then
-        fn_log 'The JAVA_NAME have not been configured, please use [jm cfg] command to configure the jar name'
+        fn_log 'The JAR_NAME have not been configured, please use [jm cfg] command to configure the jar name'
         exit 1
     fi
     PID=$(getPid "$jar_name")
     if [ -n "$PID" ]; then
-        error=$(kill -9 "$PID" 2>&1)
+        kill -9 "$PID" >/dev/null 2>$ERROR_LOG
 
-        fn_log "Kill old $jar_name (PID: $PID)..." "$error"
+        fn_log "Kill old $jar_name (PID: $PID)..."
     fi
-    JVM_OPTIONS=$(echo "$JVM_OPTIONS" | tr '\n' ' ')
-    echo "java "$JVM_OPTIONS" -jar "$jar_name"
-    fn_log "Start $jar_name...The jvm options is $JVM_OPTIONS"
-    nohup java "$JVM_OPTIONS" -jar "$jar_name" >>/dev/null 2>&1 &
 
+    log_info "Start $jar_name..."
+
+    #将字符串解析为多个参数的变量
+    echo "$JVM_OPTIONS"
+    # read -r -a jvm_options <<< "$JVM_OPTIONS"
+    # echo "${jvm_options[@]}"
+    # nohup java "${jvm_options[@]}" -jar "$jar_name" >/dev/null 2>$ERROR_LOG &
+    nohup java $JVM_OPTIONS -jar "$jar_name" >/dev/null 2>$ERROR_LOG &
     PID=$(getPid "$jar_name")
-    fn_log "The $jar_name started (PID: $PID)."
-
+    fn_log "The $jar_name started (PID: $PID)"
 }
 
 function monitoring() {
@@ -205,9 +209,20 @@ function log_error() {
 
 function fn_log() {
     if [ $? -eq 0 ]; then
-        log_info "$1"
+        #有error信息也按异常处理
+        err_message=$(cat "$ERROR_LOG")
+        if [[ -n "${err_message}" ]]; then
+            log_error "$1 failed , cause: [$err_message]"
+            # 清空error log
+            echo '' >"$ERROR_LOG"
+            exit 1
+        fi
+        log_info "$1 sucessfully"
     else
-        log_error "$1 failed , cause: [$2]"
+        err_message=$(cat "$ERROR_LOG")
+        log_error "$1 failed , cause: [$err_message]"
+        # 清空error log
+        echo '' >"$ERROR_LOG"
         exit 1
     fi
 }
@@ -223,7 +238,7 @@ function do_init_profile() {
     cat <<EOF >$PROFILE_FILE
 JAR_NAME='/app/ifrs17_cic_measure_engine-1.0-SNAPSHOT.jar'
 JVM_OPTIONS='
--Xms96g -Xmx110g 
+-Xms16g -Xmx32g 
 -Djdbc:postgresql://pgm-0jlh2idch5i2vjg2.pg.rds.aliyuncs.com:5432/front?currentSchema=ifrs17_pi_dev_perf
 -Dspring.profiles.active=local
 -Dmeasure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums=32
