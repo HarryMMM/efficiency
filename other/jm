@@ -1,7 +1,8 @@
 #!/bin/bash
 
 ####################################################### 加载配置文件 ########################################################
-PROFILE_FILE=$HOME/.jm_profile
+# 使用$(eval echo ~$SUDO_USER)获取用户家目录，避免sudo执行时获取到root的家目录
+PROFILE_FILE=$(eval echo ~$SUDO_USER)/.jm_profile
 if [[ -e $PROFILE_FILE ]]; then
     source $PROFILE_FILE
 fi
@@ -27,6 +28,7 @@ function restart() {
         fn_log "Kill old $jar_name (PID: $PID)..." "$error"
     fi
     JVM_OPTIONS=$(echo "$JVM_OPTIONS" | tr '\n' ' ')
+    echo "java "$JVM_OPTIONS" -jar "$jar_name"
     fn_log "Start $jar_name...The jvm options is $JVM_OPTIONS"
     nohup java "$JVM_OPTIONS" -jar "$jar_name" >>/dev/null 2>&1 &
 
@@ -230,8 +232,7 @@ JVM_OPTIONS='
 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.ssl=false
 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=35099
 -Dcom.sun.management.jmxremote.rmi.port=7700
--Djava.rmi.server.hostname=39.101.71.152 
-'
+-Djava.rmi.server.hostname=39.101.71.152'
 EOF
     fn_log "The configuration file initialized, please use [jm cfg] command to configure the JMonitor Tools"
 }
