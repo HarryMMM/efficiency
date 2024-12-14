@@ -4,7 +4,7 @@
 # 使用$(eval echo ~$SUDO_USER)获取用户家目录，避免sudo执行时获取到root的家目录
 PROFILE_FILE=$(eval echo ~$SUDO_USER)/.jm_profile
 ERROR_LOG=./error.log
-echo "" > $ERROR_LOG
+echo "" >$ERROR_LOG
 if [[ -e $PROFILE_FILE ]]; then
     source $PROFILE_FILE
 fi
@@ -20,7 +20,7 @@ function getPid() {
 function restart() {
     jar_name="$JAR_NAME"
     if [[ -z "$jar_name" ]]; then
-        fn_log 'The JAR_NAME have not been configured, please use [jm cfg] command to configure the jar name'
+        log_info 'The JAR_NAME have not been configured, please use [jm cfg] command to configure the jar name'
         exit 1
     fi
     PID=$(getPid "$jar_name")
@@ -37,20 +37,26 @@ function restart() {
     # echo "${jvm_options[@]}"
     # nohup java "${jvm_options[@]}" -jar "$jar_name" >/dev/null 2>$ERROR_LOG &
     nohup java $JVM_OPTIONS -jar "$APP_PATH/$jar_name" >>/dev/null 2>&1 &
+    # 休眠 0.5s
+    sleep 0.5
     PID=$(getPid "$jar_name")
-    fn_log "The $jar_name started (PID: $PID)"
+    if ! ps -p $PID >/dev/null; then
+        log_error "The $jar_name starts failing."
+        exit 1
+    fi
+    log_info "The $jar_name started (PID: $PID)"
 }
 
 function monitoring() {
     jar_name="$JAR_NAME"
     if [[ -z "$jar_name" ]]; then
-        fn_log 'The JAVA_NAME have not been configured, please use [jm cfg] command to configure the jar name'
+        log_error 'The JAVA_NAME have not been configured, please use [jm cfg] command to configure the jar name'
         exit 1
     fi
     #获取进程PID
     PID=$(getPid "$jar_name")
     if ! ps -p $PID >/dev/null; then
-        fn_log "Process with PID $PID does not exist."
+        log_error "Process with PID $PID does not exist."
         exit 1
     fi
 
@@ -245,6 +251,7 @@ JVM_OPTIONS='
 -Dmeasure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums=1
 -Dmeasure-engine.engines.IC.PAA.ExpectedPolicyCF.shardingSize=200000
 -Dmeasure-engine.writeSize=5000
+-Dmeasure-engine.engines.IC.PAA.ExpectedPolicyCF.writeThreadNum=32
 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.ssl=false
 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=35099
 -Dcom.sun.management.jmxremote.rmi.port=7700
@@ -252,7 +259,7 @@ JVM_OPTIONS='
 -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27293
 '
 EOF
-    fn_log "The configuration file initialized, please use [jm cfg] command to configure the JMonitor Tools"
+    log_info "The configuration file initialized, please use [jm cfg] command to configure the JMonitor Tools"
 }
 
 function init_profile() {
