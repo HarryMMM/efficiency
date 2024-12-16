@@ -202,6 +202,7 @@ sub_cmd:
     \033[33mcfg\033[0m Configure the JMonitor Tools e.g. jm cfg
     \033[33mini\033[0m Initionlized JMonitor Tools' configuration,
         the old configuration will be overwritten e.g. jm ini
+    \033[33mps\033[0m Find the process like using ps -ef|grep xx, e.g. jm ps
 
 "
 }
