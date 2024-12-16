@@ -296,7 +296,7 @@ function main() {
         ;;
     ps)
         jar_name=$JAR_NAME
-        ps -ef | grep $jar_name
+        pgrep -a -f  ifrs17_cic_measure_engine-1.0-SNAPSHOT.jar
         ;;
     -h)
         help
