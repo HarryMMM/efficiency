@@ -26,7 +26,6 @@ function restart() {
     PID=$(getPid "$jar_name")
     if [ -n "$PID" ]; then
         kill -9 "$PID" >/dev/null 2>$ERROR_LOG
-
         fn_log "Kill old $jar_name (PID: $PID)..."
     fi
 
@@ -34,17 +33,21 @@ function restart() {
 
     #将字符串解析为多个参数的变量
     # read -r -a jvm_options <<< "$JVM_OPTIONS"
-    # echo "${jvm_options[@]}"
-    # nohup java "${jvm_options[@]}" -jar "$jar_name" >/dev/null 2>$ERROR_LOG &
-    nohup java $JVM_OPTIONS -jar "$APP_PATH/$jar_name" >>/dev/null 2>&1 &
+    nohup java $JVM_OPTIONS -jar "$APP_PATH/$jar_name" >/dev/null 2>$ERROR_LOG &
+    checkStatus "$jar_name"
+}
+
+function checkStatus() {
     # 休眠 0.5s
     sleep 0.5
-    PID=$(getPid "$jar_name")
-    if ! ps -p $PID >/dev/null; then
-        log_error "The $jar_name starts failing."
+    PID=$(getPid "$1")
+    if ! ps -p "$PID" >/dev/null 2>&1; then
+        #有error信息也按异常处理
+        err_message=$(cat "$ERROR_LOG")
+        log_error "The $jar_name started failed, cause: [$err_message]"
         exit 1
     fi
-    log_info "The $jar_name started (PID: $PID)"
+    log_info "The $jar_name (PID: $PID) started"
 }
 
 function monitoring() {
@@ -219,18 +222,16 @@ function fn_log() {
         err_message=$(cat "$ERROR_LOG")
         if [[ -n "${err_message}" ]]; then
             log_error "$1 failed , cause: [$err_message]"
-            # 清空error log
-            echo '' >"$ERROR_LOG"
             exit 1
         fi
         log_info "$1 sucessfully"
     else
         err_message=$(cat "$ERROR_LOG")
         log_error "$1 failed , cause: [$err_message]"
-        # 清空error log
-        echo '' >"$ERROR_LOG"
         exit 1
     fi
+    # 清空error log
+    echo '' >"$ERROR_LOG"
 }
 
 function check_profile() {
@@ -246,7 +247,7 @@ APP_PATH='/app'
 JAR_NAME='ifrs17_cic_measure_engine-1.0-SNAPSHOT.jar'
 JVM_OPTIONS='
 -Xms16g -Xmx32g 
--Dspring.datasource.url=jdbc:postgresql://pgm-0jlh2idch5i2vjg2.pg.rds.aliyuncs.com:5432/front?currentSchema=ifrs17_pi_dev_perf
+-Dspring.datasource.url=jdbc:postgresql://pgm-0jlh2idch5i2vjg2.pg.rds.aliyuncs.com:5432/front?currentSchema=ifrs17_pi_dev_perf&reWriteBatchedInserts=true
 -Dspring.profiles.active=local
 -Dmeasure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums=1
 -Dmeasure-engine.engines.IC.PAA.ExpectedPolicyCF.shardingSize=200000
@@ -291,6 +292,10 @@ function main() {
     ini)
         do_init_profile
         vim $PROFILE_FILE
+        ;;
+    ps)
+        jar_name=$JAR_NAME
+        ps -ef | grep $jar_name
         ;;
     -h)
         help
