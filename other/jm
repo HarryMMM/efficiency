@@ -36,6 +36,13 @@ function restart() {
     nohup java $JVM_OPTIONS -jar "$APP_PATH/$jar_name" >/dev/null 2>$ERROR_LOG &
     checkStatus "$jar_name"
 }
+function remote_restart() {
+  for host in $DEPLOY_HOSTS; do
+        log_info "执行启动命令[$host]..."
+        ssh "admin@$host" 'jm rst'
+        log_info "启动命令执行完成[$host]...\n"
+  done
+}
 
 function deploy(){
     jar_name="$JAR_NAME"
@@ -230,17 +237,18 @@ sub_cmd:
         the old configuration will be overwritten e.g. jm ini
     \033[33mps\033[0m Find the process like using ps -ef|grep xx, e.g. jm ps
     \033[33mdp\033[0m deploy to host, e.g. jm dp
+    \033[33mrrst\033[0m restart a app that in the remote host, e.g. jm rrst
 
 "
 }
 
 function log_info() {
-    log_prefix=JMonitor:
+    log_prefix="JMonitor[$(date "+%Y-%m-%d %H:%M:%S")]:"
     echo -e "\033[32m$log_prefix $*\033[0m"
 }
 
 function log_error() {
-    log_prefix=JMonitor:
+    log_prefix="JMonitor[$(date "+%Y-%m-%d %H:%M:%S")]:"
     echo -e "\033[31m$log_prefix $*\033[0m"
 }
 
@@ -325,12 +333,17 @@ function main() {
         vim $PROFILE_FILE
         ;;
     ps)
+        check_profile
         jar_name=$JAR_NAME
         pgrep -a -f  $jar_name
         ;;
     dp)
-        jar_name=$JAR_NAME
+        check_profile
         deploy
+        ;;
+    rrst)
+        check_profile
+        remote_restart
         ;;
     -h)
         help
