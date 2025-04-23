@@ -109,6 +109,7 @@ function monitoring() {
     PREV_RX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
     PREV_TX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $10}')
 
+
     #磁盘IO
     DISK_PREV_READ=$(cat "/proc/$PID/io" | grep -w "read_bytes" | awk '{print $2}')
     DISK_PREV_WRITE=$(cat "/proc/$PID/io" | grep -w "write_bytes" | awk '{print $2}')
@@ -126,8 +127,8 @@ function monitoring() {
         # 获取网络 IO
         RX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
         TX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $10}')
-        RX_RATE=$(((RX - PREV_RX) / INTERVAL / 1024 / 1024))
-        TX_RATE=$(((TX - PREV_TX) / INTERVAL / 1024 / 1024))
+        RX_RATE=$(((RX - PREV_RX) / INTERVAL / 1024 ))
+        TX_RATE=$(((TX - PREV_TX) / INTERVAL / 1024 ))
         PREV_RX=$RX
         PREV_TX=$TX
 
@@ -151,10 +152,10 @@ function monitoring() {
         remainder=$((count % 15))
         if (($remainder == 0)); then
             # 输出表头
-            echo -e "Timestamp\t\tCPU(%)\tMemory(GB)\tNet In(MB/s)\tNet Out(MB/s)\tDisk Read(KB/s)\tDisk Write(KB/s)\tYong GC Count\tFull GC Count"
+            echo -e "Timestamp\t\tCPU(%)\tMemory(GB)\tNet In(KB/s)\tNet Out(KB/s)\tD Read(KB/s)\tD Write(KB/s)\tYGC Count\tFGC Count"
         fi
 
-        echo -e "$TIMESTAMP\t$CPU\t$MEM\t\t$RX_RATE\t\t$TX_RATE\t\t$DISK_READ_RATE\t\t$DISK_WRITE_RATE\t\t\t$YONG_GC_COUNT\t\t$FULL_GC_COUNT"
+        echo -e "$TIMESTAMP\t$CPU\t$MEM\t\t$RX_RATE\t\t$TX_RATE\t\t$DISK_READ_RATE\t\t$DISK_WRITE_RATE\t\t$YONG_GC_COUNT\t\t$FULL_GC_COUNT"
         ((count++))
         # 等待指定的间隔
         sleep $INTERVAL
