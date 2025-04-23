@@ -1,5 +1,13 @@
 #!/bin/sh
 #[git]
-SCP_GROUP_DIR=/G/项目/UR/code/scp-group
+SCP_GROUP_DIR=/g/项目/TCL项目/code/behind
 #[ssh]
 SSH_ROOT='/c/Users/Harry/.ssh'
+
+# 数据库配置
+db_profile=pre
+# pre数据库信息
+pre_user=scp_uat
+pre_password=UMNlVBAbBBBruEUmewP1qIBmtir2N0RT
+pre_host=172.25.128.113
+pre_port=3306
