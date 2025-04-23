@@ -105,7 +105,7 @@ function monitoring() {
 
     count=0
     # 初始化网络 IO 数据
-    NET_DEV="eth0" # 替换为你的网络接口
+    NET_DEV=$(ip route show default | awk '/default/ {print $5}')
     PREV_RX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
     PREV_TX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $10}')
 
