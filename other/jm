@@ -108,6 +108,11 @@ function monitoring() {
     NET_DEV="eth0" # 替换为你的网络接口
     PREV_RX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
     PREV_TX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $10}')
+
+    #磁盘IO
+    DISK_PREV_READ=$(cat "/proc/$PID/io" | grep -w "read_bytes" | awk '{print $2}')
+    DISK_PREV_WRITE=$(cat "/proc/$PID/io" | grep -w "write_bytes" | awk '{print $2}')
+    #GC
     FULL_GC_COUNT=N/A
     YONG_GC_COUNT=N/A
 
@@ -126,6 +131,15 @@ function monitoring() {
         PREV_RX=$RX
         PREV_TX=$TX
 
+        # 获取磁盘IO
+        DISK_READ=$(cat "/proc/$PID/io" | grep -w "read_bytes" | awk '{print $2}')
+        DISK_WRITE=$(cat "/proc/$PID/io" | grep -w "write_bytes" | awk '{print $2}')
+        DISK_READ_RATE=$(((DISK_READ - DISK_PREV_READ) / INTERVAL / 1024 ))
+        DISK_WRITE_RATE=$(((DISK_WRITE - DISK_PREV_WRITE) / INTERVAL / 1024 ))
+        DISK_PREV_READ=$DISK_READ
+        DISK_PREV_WRITE=$DISK_WRITE
+         
+
         # 获取 Full GC 次数
         GC_OUTPUT=$(jstat -gc $PID 2>/dev/null)
         if [ $? -eq 0 ]; then
@@ -137,10 +151,10 @@ function monitoring() {
         remainder=$((count % 15))
         if (($remainder == 0)); then
             # 输出表头
-            echo -e "Timestamp\t\tCPU(%)\tMemory(GB)\tNet In(MB/s)\tNet Out(MB/s)\tYong GC Count\tFull GC Count"
+            echo -e "Timestamp\t\tCPU(%)\tMemory(GB)\tNet In(MB/s)\tNet Out(MB/s)\tDisk Read(KB/s)\tDisk Write(KB/s)\tYong GC Count\tFull GC Count"
         fi
 
-        echo -e "$TIMESTAMP\t$CPU\t$MEM\t\t$RX_RATE\t\t$TX_RATE\t\t$YONG_GC_COUNT\t\t$FULL_GC_COUNT"
+        echo -e "$TIMESTAMP\t$CPU\t$MEM\t\t$RX_RATE\t\t$TX_RATE\t\t$DISK_READ_RATE\t\t$DISK_WRITE_RATE\t\t\t$YONG_GC_COUNT\t\t$FULL_GC_COUNT"
         ((count++))
         # 等待指定的间隔
         sleep $INTERVAL
