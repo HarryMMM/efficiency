@@ -36,6 +36,31 @@ function restart() {
     nohup java $JVM_OPTIONS -jar "$APP_PATH/$jar_name" >/dev/null 2>$ERROR_LOG &
     checkStatus "$jar_name"
 }
+
+# 停止进程
+function stop() {
+    jar_name="$JAR_NAME"
+    if [[ -z "$jar_name" ]]; then
+        log_info 'The JAR_NAME have not been configured, please use [jm cfg] command to configure the jar name'
+        exit 1
+    fi
+    PID=$(getPid "$jar_name")
+    if [ -n "$PID" ]; then
+        kill -9 "$PID" >/dev/null 2>$ERROR_LOG
+        fn_log "Kill old $jar_name (PID: $PID)..."
+    fi
+    log_info "$jar_name (PID: $PID) stoped."
+}
+
+# 停止进程
+function remote_stop() {
+    for host in $DEPLOY_HOSTS; do
+        log_info "执行停止命令[$host]..."
+        ssh "admin@$host" 'jm stp'
+        log_info "停止命令执行完成[$host]...\n"
+  done
+}
+
 function remote_restart() {
   for host in $DEPLOY_HOSTS; do
         log_info "执行启动命令[$host]..."
@@ -109,6 +134,7 @@ function monitoring() {
     PREV_RX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
     PREV_TX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $10}')
 
+
     #磁盘IO
     DISK_PREV_READ=$(cat "/proc/$PID/io" | grep -w "read_bytes" | awk '{print $2}')
     DISK_PREV_WRITE=$(cat "/proc/$PID/io" | grep -w "write_bytes" | awk '{print $2}')
@@ -126,8 +152,8 @@ function monitoring() {
         # 获取网络 IO
         RX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $2}')
         TX=$(cat /proc/$PID/net/dev | grep $NET_DEV | awk '{print $10}')
-        RX_RATE=$(((RX - PREV_RX) / INTERVAL / 1024 / 1024))
-        TX_RATE=$(((TX - PREV_TX) / INTERVAL / 1024 / 1024))
+        RX_RATE=$(((RX - PREV_RX) / INTERVAL / 1024 ))
+        TX_RATE=$(((TX - PREV_TX) / INTERVAL / 1024 ))
         PREV_RX=$RX
         PREV_TX=$TX
 
@@ -151,10 +177,10 @@ function monitoring() {
         remainder=$((count % 15))
         if (($remainder == 0)); then
             # 输出表头
-            echo -e "Timestamp\t\tCPU(%)\tMemory(GB)\tNet In(MB/s)\tNet Out(MB/s)\tDisk Read(KB/s)\tDisk Write(KB/s)\tYong GC Count\tFull GC Count"
+            echo -e "Timestamp\t\tCPU(%)\tMemory(GB)\tNet In(KB/s)\tNet Out(KB/s)\tD Read(KB/s)\tD Write(KB/s)\tYGC Count\tFGC Count"
         fi
 
-        echo -e "$TIMESTAMP\t$CPU\t$MEM\t\t$RX_RATE\t\t$TX_RATE\t\t$DISK_READ_RATE\t\t$DISK_WRITE_RATE\t\t\t$YONG_GC_COUNT\t\t$FULL_GC_COUNT"
+        echo -e "$TIMESTAMP\t$CPU\t$MEM\t\t$RX_RATE\t\t$TX_RATE\t\t$DISK_READ_RATE\t\t$DISK_WRITE_RATE\t\t$YONG_GC_COUNT\t\t$FULL_GC_COUNT"
         ((count++))
         # 等待指定的间隔
         sleep $INTERVAL
@@ -252,6 +278,8 @@ sub_cmd:
     \033[33mps\033[0m Find the process like using ps -ef|grep xx, e.g. jm ps
     \033[33mdp\033[0m deploy to host, e.g. jm dp
     \033[33mrrst\033[0m restart a app that in the remote host, e.g. jm rrst
+    \033[33mstp\033[0m stop a app, e.g. jm stop
+    \033[33mrstp\033[0m stop a app that in the remote host, e.g. jm rstp
 
 "
 }
@@ -333,6 +361,11 @@ function main() {
         check_profile
         restart "$orther_args"
         ;;
+    stp)
+        # 前置检查
+        check_profile
+        stop "$orther_args"
+        ;;
     mon)
         # 前置检查
         check_profile
@@ -358,6 +391,10 @@ function main() {
     rrst)
         check_profile
         remote_restart
+        ;;
+    rstp)
+        check_profile
+        remote_stop
         ;;
     -h)
         help
