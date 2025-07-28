@@ -349,7 +349,7 @@ APP_LOGS_INFO_FILE=\${APP_LOGS_PATH}/sys_info.log
 APP_LOGS_ERROR_FILE=\${APP_LOGS_PATH}/sys_error.log
 
 JVM_OPTIONS='
--Xms16g -Xmx32g 
+-Xms2g -Xmx2g 
 -Dspring.profiles.active=local
 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.ssl=false
 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=35099
