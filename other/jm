@@ -16,6 +16,24 @@ function getPid() {
     echo "$PID"
 }
 
+function show_log(){
+    if [[ "$1" == "-e" ]]; then
+        if [ ! -f "${APP_LOGS_ERROR_FILE}" ]; then
+            log_error "错误日志文件[${APP_LOGS_ERROR_FILE}]不存在，请正确配置"
+            exit 1
+        fi
+        
+        tail -f -n 500 "${APP_LOGS_ERROR_FILE}"
+    else
+    if [ ! -f "${APP_LOGS_INFO_FILE}" ]; then
+            log_error "日志文件[${APP_LOGS_INFO_FILE}]不存在，请正确配置"
+            exit 1
+        fi
+        tail -f -n 500 "${APP_LOGS_INFO_FILE}"
+    fi
+}
+
+
 # 重启进程
 function restart() {
     jar_name="$JAR_NAME"
@@ -270,17 +288,17 @@ function help() {
 usage: jm <sub_cmd>
 
 sub_cmd:
-    \033[33mrst\033[0m restart a app, e.g. jm rst
-    \033[33mmon\033[0m monitor a app, e.g. jm mon
-    \033[33mcfg\033[0m Configure the JMonitor Tools e.g. jm cfg
     \033[33mini\033[0m Initionlized JMonitor Tools' configuration,
         the old configuration will be overwritten e.g. jm ini
+    \033[33mcfg\033[0m Configure the JMonitor Tools e.g. jm cfg
+    \033[33mrst\033[0m restart a app, e.g. jm rst
+    \033[33mstp\033[0m stop a app, e.g. jm stop
+    \033[33mlg\033[0m show the logs of the server, e.g. jm lg show info log; jm lg -e show error log
+    \033[33mmon\033[0m monitor a app, e.g. jm mon
     \033[33mps\033[0m Find the process like using ps -ef|grep xx, e.g. jm ps
     \033[33mdp\033[0m deploy to host, e.g. jm dp
     \033[33mrrst\033[0m restart a app that in the remote host, e.g. jm rrst
-    \033[33mstp\033[0m stop a app, e.g. jm stop
     \033[33mrstp\033[0m stop a app that in the remote host, e.g. jm rstp
-
 "
 }
 
@@ -321,25 +339,30 @@ function check_profile() {
 
 function do_init_profile() {
     cat <<EOF >$PROFILE_FILE
-APP_PATH='/app'    
+################################################# 应用启动配置 ###################################################    
+APP_PATH='/app'  
 JAR_NAME='ifrs17_cic_measure_engine-1.0-SNAPSHOT.jar'
+
+# 日志配置（用以读取日志）
+APP_LOGS_PATH=\${APP_PATH}/logs
+APP_LOGS_INFO_FILE=\${APP_LOGS_PATH}/sys_info.log
+APP_LOGS_ERROR_FILE=\${APP_LOGS_PATH}/sys_error.log
+
 JVM_OPTIONS='
 -Xms16g -Xmx32g 
--Dspring.datasource.url=jdbc:postgresql://pgm-0jlh2idch5i2vjg2.pg.rds.aliyuncs.com:5432/front?currentSchema=ifrs17_pi_dev_perf&reWriteBatchedInserts=true
 -Dspring.profiles.active=local
--Dmeasure-engine.engines.IC.PAA.I17PAAMeasureEngine.sofamq.consumeThreadNums=1
--Dmeasure-engine.engines.IC.PAA.ExpectedPolicyCF.shardingSize=200000
--Dmeasure-engine.writeSize=5000
--Dmeasure-engine.engines.IC.PAA.ExpectedPolicyCF.writeThreadNum=32
 -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.ssl=false
 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=35099
 -Dcom.sun.management.jmxremote.rmi.port=7700
--Djava.rmi.server.hostname=39.101.71.152
--Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=27293
+-Djava.rmi.server.hostname=$(hostname -I | awk '{print $1}')
+-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005
 '
+
+################################################# 应用部署配置 ###################################################
+# 要上传部署的jar包路径
 APP_SOURCE_PATH=''
-# 使用空格分隔多个host
-DEPLOY_HOSTS='10.1.76.23 10.1.76.22'
+# 要部署的目标服务器路径，使用空格分隔多个host
+DEPLOY_HOSTS='xx.xx.xx.xx xx.xx.xx.xx'
 EOF
     log_info "The configuration file initialized, please use [jm cfg] command to configure the JMonitor Tools"
 }
@@ -365,6 +388,11 @@ function main() {
         # 前置检查
         check_profile
         stop "$orther_args"
+        ;;
+    lg)
+        # 前置检查
+        check_profile
+        show_log "$orther_args"
         ;;
     mon)
         # 前置检查
