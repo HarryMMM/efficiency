@@ -12,7 +12,7 @@ fi
 
 function getPid() {
     jar_name=$1
-    PID=$(ps aux | grep "${jar_name}" | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup' | tr -s ' ' | cut -d ' ' -f 2)
+    PID=$(ps aux | grep "${APP_PATH}/${jar_name}" | grep -v 'grep' | grep -v 'sudo' | grep -v 'nohup' | tr -s ' ' | cut -d ' ' -f 2)
     echo "$PID"
 }
 
