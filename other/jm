@@ -48,7 +48,7 @@ function restart() {
     fi
 
     log_info "Start $jar_name..."
-
+    sleep 1
     #将字符串解析为多个参数的变量
     # read -r -a jvm_options <<< "$JVM_OPTIONS"
     nohup java $JVM_OPTIONS -jar "$APP_PATH/$jar_name" >/dev/null 2>$ERROR_LOG &
